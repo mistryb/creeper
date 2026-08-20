@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\Settings\ApiKeyController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Middleware\EnsureBillingIsEnabled;
@@ -26,6 +27,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+
+    /*
+     * The user's own model API key. Writes are throttled because a key is a
+     * credential, and swapping one repeatedly is never a legitimate rhythm.
+     */
+    Route::get('settings/api-key', [ApiKeyController::class, 'edit'])->name('api-key.edit');
+
+    Route::put('settings/api-key', [ApiKeyController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('api-key.update');
+
+    Route::delete('settings/api-key', [ApiKeyController::class, 'destroy'])
+        ->middleware('throttle:6,1')
+        ->name('api-key.destroy');
 
     /*
      * Billing only exists when this install is running as a paid service.

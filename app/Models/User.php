@@ -23,6 +23,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $email
  * @property Carbon|null $email_verified_at
  * @property string $password
+ * @property string|null $creep_api_key
+ * @property string|null $creep_api_key_hint
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -32,7 +34,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property-read Collection<int, CreepTarget> $creepTargets
  */
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
+#[Hidden(['password', 'creep_api_key', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
@@ -48,6 +50,7 @@ class User extends Authenticatable implements PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'creep_api_key' => 'encrypted',
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
@@ -56,5 +59,33 @@ class User extends Authenticatable implements PasskeyUser
     public function creepTargets(): HasMany
     {
         return $this->hasMany(CreepTarget::class);
+    }
+
+    /**
+     * Whether this user has a model API key on file for the creeping agent.
+     */
+    public function hasCreepApiKey(): bool
+    {
+        return filled($this->creep_api_key);
+    }
+
+    /**
+     * Store a model API key, keeping the last four characters in the clear so
+     * the settings screen can identify it without decrypting anything.
+     */
+    public function setCreepApiKey(#[\SensitiveParameter] string $key): void
+    {
+        $this->forceFill([
+            'creep_api_key' => $key,
+            'creep_api_key_hint' => mb_substr($key, -4),
+        ])->save();
+    }
+
+    public function forgetCreepApiKey(): void
+    {
+        $this->forceFill([
+            'creep_api_key' => null,
+            'creep_api_key_hint' => null,
+        ])->save();
     }
 }

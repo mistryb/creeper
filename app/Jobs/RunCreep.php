@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Actions\CompleteCreepRun;
+use App\Billing\PlanLimits;
+use App\Billing\RunMeter;
 use App\Creeping\CreepManager;
 use App\Creeping\Exceptions\InvalidCreepPayload;
 use App\Enums\CreepOutcome;
@@ -62,8 +64,20 @@ class RunCreep implements ShouldBeUnique, ShouldQueue
         return $backoff;
     }
 
-    public function handle(CreepManager $creeper, CompleteCreepRun $completeRun): void
-    {
+    public function handle(
+        CreepManager $creeper,
+        CompleteCreepRun $completeRun,
+        PlanLimits $limits,
+        RunMeter $meter,
+    ): void {
+        $refusal = $this->refusalReason($limits, $meter);
+
+        if ($refusal !== null) {
+            $this->refuse($creeper, $refusal);
+
+            return;
+        }
+
         $driver = $creeper->driver();
 
         /** @var CreepRun $run */
@@ -133,6 +147,54 @@ class RunCreep implements ShouldBeUnique, ShouldQueue
         $run->finish(RunStatus::Failed, $error);
 
         $this->penaliseTarget();
+    }
+
+    /**
+     * Why this creep must not happen, or null if it may go ahead.
+     *
+     * These are account problems rather than target problems, so they are
+     * checked before a run is even attempted and they never count towards the
+     * target's failure streak.
+     */
+    protected function refusalReason(PlanLimits $limits, RunMeter $meter): ?string
+    {
+        if (! $limits->enabled()) {
+            return null;
+        }
+
+        $user = $this->target->user;
+
+        if (! $user->subscribed((string) config('billing.subscription', 'default'))) {
+            return 'This account has no active subscription, so the target was not crept.';
+        }
+
+        if (config('billing.requires_api_key', true) && ! $user->hasCreepApiKey()) {
+            return 'No model API key is on file. Add one in settings and Creeper will pick this target back up.';
+        }
+
+        if (! $meter->allowsRun($user)) {
+            return 'This account has hit its monthly run ceiling, so the target was not crept.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Record the refusal as a visible failed run, so the reason shows up in
+     * the target's history rather than the target simply going quiet.
+     */
+    protected function refuse(CreepManager $creeper, string $reason): void
+    {
+        /** @var CreepRun $run */
+        $run = $this->target->runs()->create([
+            'status' => RunStatus::Running,
+            'driver' => $creeper->driver()->name(),
+            'started_at' => Carbon::now(),
+        ]);
+
+        $run->finish(RunStatus::Failed, $reason);
+
+        $this->target->rescheduleFrom(Carbon::now());
     }
 
     /**

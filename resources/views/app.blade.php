@@ -34,7 +34,11 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-        @fonts
+        {{-- Doto and IBM Plex Mono belong to the landing page alone, so the
+             rest of the app never pays to download them. --}}
+        @fonts($page['component'] === 'welcome'
+            ? ['instrument-sans', 'ibm-plex-mono', 'doto']
+            : ['instrument-sans'])
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])

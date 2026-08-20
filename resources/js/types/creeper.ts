@@ -97,5 +97,5 @@ export type BillingPlan = {
     price: string | null;
     targets: number | null;
     min_frequency: string | null;
-    purchasable?: boolean;
+    included_runs?: number | null;
 };

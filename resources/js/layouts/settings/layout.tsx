@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
+import { edit as editApiKey } from '@/routes/api-key';
 import { edit as editAppearance } from '@/routes/appearance';
 import { show as billing } from '@/routes/billing';
 import { edit } from '@/routes/profile';
@@ -20,6 +21,11 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Security',
         href: editSecurity(),
+        icon: null,
+    },
+    {
+        title: 'API key',
+        href: editApiKey(),
         icon: null,
     },
     {

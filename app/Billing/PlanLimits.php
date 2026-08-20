@@ -58,6 +58,7 @@ class PlanLimits
                 'price' => 'Free',
                 'targets' => null,
                 'min_frequency' => CreepFrequency::Hourly->value,
+                'included_runs' => null,
             ];
         }
 
@@ -119,6 +120,22 @@ class PlanLimits
     public function allowsFrequency(User $user, CreepFrequency $frequency): bool
     {
         return in_array($frequency, $this->allowedFrequencies($user), true);
+    }
+
+    /**
+     * The one plan people can actually buy.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function purchasablePlan(): ?array
+    {
+        foreach ($this->plans() as $key => $plan) {
+            if (filled($plan['stripe_price'] ?? null)) {
+                return [...$plan, 'key' => $key];
+            }
+        }
+
+        return null;
     }
 
     /**

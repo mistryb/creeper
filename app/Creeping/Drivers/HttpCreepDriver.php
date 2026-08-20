@@ -19,6 +19,9 @@ use RuntimeException;
  *  - 202 Accepted — the agent took the work and will POST its results to the
  *    signed `callback_url` when it's done. Real agents take minutes, so this
  *    is the path most of them will want.
+ *
+ * The request carries the user's own model API key when they have one on
+ * file, so inference is billed to them by their provider rather than to us.
  */
 class HttpCreepDriver implements CreepDriver
 {
@@ -63,6 +66,9 @@ class HttpCreepDriver implements CreepDriver
             'url' => $run->target->url,
             'settings' => $run->target->settings ?? [],
             'callback_url' => $this->callbackUrl($run),
+            // The user's own model key. The agent spends it on their behalf;
+            // we never hold a balance and never mark it up.
+            ...array_filter(['api_key' => $run->target->user->creep_api_key]),
         ]);
 
         if ($response->accepted()) {

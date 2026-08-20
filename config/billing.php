@@ -20,33 +20,90 @@ return [
     | Plans
     |--------------------------------------------------------------------------
     |
-    | "targets" caps how many creep targets a user may keep. "min_frequency"
-    | is the fastest schedule the plan allows — anything more demanding is
-    | rejected at validation time.
+    | There is one paid plan, on purpose. "targets" caps how many creep targets
+    | a user may keep (null for no cap) and "min_frequency" is the fastest
+    | schedule allowed. "included_runs" is the allowance the flat fee covers;
+    | runs beyond it are billed through the meter below.
+    |
+    | The allowance is enforced by Stripe, not here — the metered price is
+    | tiered so the first "included_runs" units cost nothing. This app reports
+    | every billable run and lets Stripe do the arithmetic, so a user's
+    | allowance always tracks their real billing period.
     |
     */
 
-    'default_plan' => 'free',
+    'default_plan' => 'none',
 
     'plans' => [
 
-        'free' => [
-            'name' => 'Free',
-            'price' => 'Free',
-            'targets' => 3,
+        'none' => [
+            'name' => 'No subscription',
+            'price' => null,
+            'amount' => null,
+            'targets' => 0,
             'min_frequency' => 'daily',
+            'included_runs' => 0,
             'stripe_price' => null,
+            'metered_price' => null,
         ],
 
-        'pro' => [
-            'name' => 'Pro',
-            'price' => '$12/month',
-            'targets' => 50,
+        'creeper' => [
+            'name' => 'Creeper',
+            'price' => '$7/month',
+            // Minor units. Never floats for money.
+            'amount' => 700,
+            'currency' => 'USD',
+            'targets' => null,
             'min_frequency' => 'hourly',
-            'stripe_price' => env('STRIPE_PRICE_PRO'),
+            'included_runs' => 1500,
+            'stripe_price' => env('STRIPE_PRICE_CREEPER'),
+            'metered_price' => env('STRIPE_PRICE_CREEP_RUN'),
         ],
 
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Run Meter
+    |--------------------------------------------------------------------------
+    |
+    | "event" must match the event name of the Stripe meter exactly, or usage
+    | is reported into the void. "unit_amount" is what a run past the
+    | allowance costs, in minor units, and exists so the marketing page and
+    | the billing screen can quote a number without hard-coding one.
+    |
+    */
+
+    'meter' => [
+        'event' => env('STRIPE_METER_EVENT', 'creep_run'),
+        'unit_amount' => 1,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Run Ceiling
+    |--------------------------------------------------------------------------
+    |
+    | A hard stop on billable runs per calendar month, so a runaway schedule
+    | cannot quietly bill somebody hundreds of dollars. Runs are refused with
+    | a visible error once this is hit. Set to null to remove the stop.
+    |
+    */
+
+    'run_ceiling' => (int) env('BILLING_RUN_CEILING', 25000),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Bring Your Own Key
+    |--------------------------------------------------------------------------
+    |
+    | The model API key belongs to the user — they pay their provider directly
+    | and we never mark it up. When this is on, a target belonging to a user
+    | with no key on file will not be crept.
+    |
+    */
+
+    'requires_api_key' => (bool) env('BILLING_REQUIRES_API_KEY', true),
 
     /*
     |--------------------------------------------------------------------------

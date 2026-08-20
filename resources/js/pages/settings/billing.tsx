@@ -1,21 +1,47 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { Check } from 'lucide-react';
 import BillingController from '@/actions/App/Http/Controllers/BillingController';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { show } from '@/routes/billing';
+import { edit as editApiKey } from '@/routes/api-key';
 import { portal } from '@/routes/billing';
 import type { BillingPlan } from '@/types';
 
+type Usage = {
+    targets: number;
+    limit: number | null;
+    runs: number;
+    included_runs: number | null;
+    overage_runs: number;
+    overage_amount: number;
+};
+
 type Props = {
     plan: BillingPlan;
-    plans: BillingPlan[];
-    usage: { targets: number; limit: number | null };
+    offer: BillingPlan | null;
+    usage: Usage;
+    overage_unit_amount: number;
+    has_api_key: boolean;
     subscribed: boolean;
 };
 
-export default function Billing({ plan, plans, usage, subscribed }: Props) {
+function money(minorUnits: number): string {
+    return `$${(minorUnits / 100).toFixed(2)}`;
+}
+
+export default function Billing({
+    plan,
+    offer,
+    usage,
+    overage_unit_amount: overageUnitAmount,
+    has_api_key: hasApiKey,
+    subscribed,
+}: Props) {
+    const included = usage.included_runs;
+    const usedPercent =
+        included && included > 0
+            ? Math.min(100, (usage.runs / included) * 100)
+            : 0;
+
     return (
         <>
             <Head title="Billing" />
@@ -26,7 +52,7 @@ export default function Billing({ plan, plans, usage, subscribed }: Props) {
                 <Heading
                     variant="small"
                     title="Billing"
-                    description="Your plan and what it covers"
+                    description="Your plan and what you have used this month"
                 />
 
                 <div className="rounded-lg border border-border p-4">
@@ -35,7 +61,10 @@ export default function Billing({ plan, plans, usage, subscribed }: Props) {
                             <p className="text-sm text-muted-foreground">
                                 Current plan
                             </p>
-                            <p className="text-lg font-medium">{plan.name}</p>
+                            <p className="text-lg font-medium">
+                                {plan.name}
+                                {plan.price ? ` · ${plan.price}` : ''}
+                            </p>
                         </div>
 
                         {subscribed && (
@@ -45,105 +74,121 @@ export default function Billing({ plan, plans, usage, subscribed }: Props) {
                         )}
                     </div>
 
-                    <div className="mt-4 space-y-1">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">
-                                Creep targets
-                            </span>
-                            <span className="tabular-nums">
-                                {usage.targets}
-                                {usage.limit !== null && ` of ${usage.limit}`}
-                            </span>
-                        </div>
+                    {included !== null && (
+                        <div className="mt-5 space-y-1">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                    Checks this month
+                                </span>
+                                <span className="tabular-nums">
+                                    {usage.runs.toLocaleString()} of{' '}
+                                    {included.toLocaleString()} included
+                                </span>
+                            </div>
 
-                        {usage.limit !== null && (
                             <div
                                 className="h-1.5 overflow-hidden rounded-full bg-muted"
                                 role="progressbar"
-                                aria-valuenow={usage.targets}
+                                aria-valuenow={usage.runs}
                                 aria-valuemin={0}
-                                aria-valuemax={usage.limit}
-                                aria-label="Creep targets used"
+                                aria-valuemax={included}
+                                aria-label="Checks used this month"
                             >
                                 <div
                                     className="h-full rounded-full bg-primary"
-                                    style={{
-                                        width: `${Math.min(100, (usage.targets / usage.limit) * 100)}%`,
-                                    }}
+                                    style={{ width: `${usedPercent}%` }}
                                 />
                             </div>
-                        )}
+
+                            <p className="pt-1 text-sm text-muted-foreground">
+                                {usage.overage_runs > 0 ? (
+                                    <>
+                                        {usage.overage_runs.toLocaleString()}{' '}
+                                        extra{' '}
+                                        {usage.overage_runs === 1
+                                            ? 'check'
+                                            : 'checks'}{' '}
+                                        so far, adding{' '}
+                                        <span className="font-medium text-foreground tabular-nums">
+                                            {money(usage.overage_amount)}
+                                        </span>{' '}
+                                        to your next invoice.
+                                    </>
+                                ) : (
+                                    <>
+                                        Extra checks are{' '}
+                                        {money(overageUnitAmount)} each once the
+                                        allowance runs out.
+                                    </>
+                                )}
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="mt-4 flex justify-between border-t border-border pt-4 text-sm">
+                        <span className="text-muted-foreground">
+                            Creep targets
+                        </span>
+                        <span className="tabular-nums">
+                            {usage.targets}
+                            {usage.limit !== null && ` of ${usage.limit}`}
+                        </span>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <Heading
-                        variant="small"
-                        title="Plans"
-                        description="Change what Creeper is allowed to do for you"
-                    />
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        {plans.map((option) => (
-                            <div
-                                key={option.key}
-                                className="flex flex-col gap-3 rounded-lg border border-border p-4"
-                            >
-                                <div className="flex items-center justify-between gap-2">
-                                    <p className="font-medium">{option.name}</p>
-                                    {option.key === plan.key && (
-                                        <Badge variant="secondary">
-                                            <Check aria-hidden />
-                                            Current
-                                        </Badge>
-                                    )}
-                                </div>
-
-                                <p className="text-2xl font-semibold">
-                                    {option.price ?? '—'}
-                                </p>
-
-                                <ul className="flex-1 space-y-1 text-sm text-muted-foreground">
-                                    <li>
-                                        {option.targets === null
-                                            ? 'Unlimited creep targets'
-                                            : `${option.targets} creep targets`}
-                                    </li>
-                                    <li>
-                                        Creep as often as{' '}
-                                        {option.min_frequency ?? 'daily'}
-                                    </li>
-                                </ul>
-
-                                {option.purchasable &&
-                                    option.key !== plan.key && (
-                                        <Form
-                                            {...BillingController.checkout.form(
-                                                option.key,
-                                            )}
-                                        >
-                                            {({ processing }) => (
-                                                <Button
-                                                    type="submit"
-                                                    className="w-full"
-                                                    disabled={processing}
-                                                >
-                                                    {processing
-                                                        ? 'Opening Stripe…'
-                                                        : `Upgrade to ${option.name}`}
-                                                </Button>
-                                            )}
-                                        </Form>
-                                    )}
-                            </div>
-                        ))}
+                {!hasApiKey && (
+                    <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 p-4">
+                        <p className="text-sm text-muted-foreground">
+                            Creeper runs on your own model API key, and you do
+                            not have one on file yet.
+                        </p>
+                        <Button variant="outline" asChild>
+                            <Link href={editApiKey()}>Add a key</Link>
+                        </Button>
                     </div>
-                </div>
+                )}
+
+                {!subscribed && offer && (
+                    <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+                        <div>
+                            <p className="font-medium">{offer.name}</p>
+                            <p className="text-2xl font-semibold">
+                                {offer.price ?? '—'}
+                            </p>
+                        </div>
+
+                        <ul className="flex-1 space-y-1 text-sm text-muted-foreground">
+                            <li>
+                                {offer.targets === null
+                                    ? 'Unlimited creep targets'
+                                    : `${offer.targets} creep targets`}
+                            </li>
+                            <li>
+                                Creep as often as{' '}
+                                {offer.min_frequency ?? 'daily'}
+                            </li>
+                            <li>
+                                {offer.included_runs?.toLocaleString() ?? 0}{' '}
+                                checks included, then {money(overageUnitAmount)}{' '}
+                                each
+                            </li>
+                            <li>Your own model API key, billed to you</li>
+                        </ul>
+
+                        <Form
+                            {...BillingController.checkout.form({
+                                plan: offer.key,
+                            })}
+                        >
+                            {({ processing }) => (
+                                <Button type="submit" disabled={processing}>
+                                    Subscribe
+                                </Button>
+                            )}
+                        </Form>
+                    </div>
+                )}
             </div>
         </>
     );
 }
-
-Billing.layout = {
-    breadcrumbs: [{ title: 'Billing settings', href: show() }],
-};
