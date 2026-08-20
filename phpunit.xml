@@ -20,6 +20,9 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <!-- The suite must not depend on how a developer's .env is set. -->
+        <env name="BILLING_ENABLED" value="false"/>
+        <env name="CREEP_DRIVER" value="fake"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>

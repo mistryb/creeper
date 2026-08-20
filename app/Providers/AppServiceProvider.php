@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Creeping\Contracts\CreepDriver;
+use App\Creeping\CreepManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +17,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(CreepManager::class);
+
+        // Anything that needs to creep asks for the contract and gets
+        // whichever driver `creeping.driver` names.
+        $this->app->bind(
+            CreepDriver::class,
+            fn ($app): CreepDriver => $app->make(CreepManager::class)->driver(),
+        );
     }
 
     /**

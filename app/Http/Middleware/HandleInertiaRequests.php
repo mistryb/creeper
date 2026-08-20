@@ -42,6 +42,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            // Self-hosted installs run with billing off; the UI hides every
+            // trace of it rather than showing dead ends.
+            'billing' => [
+                'enabled' => (bool) config('billing.enabled', false),
+            ],
         ];
     }
 }

@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Middleware\EnsureBillingIsEnabled;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +26,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+
+    /*
+     * Billing only exists when this install is running as a paid service.
+     * Self-hosted installs 404 here and never see the nav item.
+     */
+    Route::middleware(EnsureBillingIsEnabled::class)->group(function () {
+        Route::get('settings/billing', [BillingController::class, 'show'])->name('billing.show');
+        Route::post('settings/billing/checkout/{plan}', [BillingController::class, 'checkout'])->name('billing.checkout');
+        Route::get('settings/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
+    });
 });
 
 Route::get('.well-known/passkey-endpoints', function () {

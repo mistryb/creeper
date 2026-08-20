@@ -1,0 +1,84 @@
+import { Link } from '@inertiajs/react';
+import { ArrowDownRight, ArrowUpRight, Repeat } from 'lucide-react';
+import { formatRelative } from '@/lib/format';
+import { show } from '@/routes/creep-targets';
+import type { CreepChange } from '@/types';
+
+/**
+ * The log of what moved. Direction gets an arrow as well as a colour.
+ */
+export function ChangeList({
+    changes,
+    showTarget = false,
+}: {
+    changes: CreepChange[];
+    showTarget?: boolean;
+}) {
+    if (changes.length === 0) {
+        return (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+                Nothing has changed yet.
+            </p>
+        );
+    }
+
+    return (
+        <ul className="divide-y divide-border">
+            {changes.map((change) => (
+                <li
+                    key={change.id}
+                    className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                    <DirectionIcon direction={change.direction} />
+
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm text-foreground">
+                            {change.description}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                            {showTarget && change.target && (
+                                <>
+                                    <Link
+                                        href={show(change.target.id)}
+                                        className="underline underline-offset-2 hover:text-foreground"
+                                    >
+                                        {change.target.display_name}
+                                    </Link>
+                                    <span aria-hidden> · </span>
+                                </>
+                            )}
+                            {formatRelative(change.detected_at)}
+                        </p>
+                    </div>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+function DirectionIcon({ direction }: { direction: CreepChange['direction'] }) {
+    if (direction === 'down') {
+        return (
+            <ArrowDownRight
+                aria-label="Decreased"
+                className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+            />
+        );
+    }
+
+    if (direction === 'up') {
+        return (
+            <ArrowUpRight
+                aria-label="Increased"
+                className="mt-0.5 size-4 shrink-0 text-rose-600 dark:text-rose-400"
+            />
+        );
+    }
+
+    return (
+        <Repeat
+            aria-label="Changed"
+            className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+        />
+    );
+}
