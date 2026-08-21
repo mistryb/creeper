@@ -6,6 +6,7 @@ use App\Creeping\Contracts\CreepDriver;
 use App\Creeping\CreepManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,9 @@ use Laravel\Fortify\Fortify;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /** Where Mailpit serves its inbox during development. */
+    protected const MAILPIT_UI_PORT = 8025;
+
     /**
      * Register any application services.
      */
@@ -45,6 +49,94 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureRateLimiting();
+        $this->configureDevCommands();
+    }
+
+    /**
+     * Add Mailpit to `composer run dev`, so the sign-in codes the application
+     * emails are readable in a browser instead of grepped out of the log.
+     *
+     * Three guards, because this is the one dev process that is not part of the
+     * repository: it is skipped unless mail is actually pointed at a local SMTP
+     * server, unless Mailpit is installed, and unless the port is free. That
+     * last one matters — somebody running `brew services start mailpit` already
+     * has it listening, and a second copy would crash-loop in its own pane.
+     */
+    protected function configureDevCommands(): void
+    {
+        // Scoped to the one command that reads this, so no other Artisan call
+        // pays for the lookups below.
+        if (! $this->app->runningInConsole() || ($_SERVER['argv'][1] ?? null) !== 'dev') {
+            return;
+        }
+
+        $host = (string) config('mail.mailers.smtp.host');
+        $port = (int) config('mail.mailers.smtp.port');
+
+        if (config('mail.default') !== 'smtp') {
+            return;
+        }
+
+        if (! in_array($host, ['127.0.0.1', 'localhost', '::1'], strict: true)) {
+            return;
+        }
+
+        $mailpit = $this->locateMailpit();
+
+        if ($mailpit === null || $this->portIsTaken($host, $port)) {
+            return;
+        }
+
+        DevCommands::register(
+            sprintf('%s --smtp %s:%d --listen 127.0.0.1:%d', $mailpit, $host, $port, self::MAILPIT_UI_PORT),
+            'mail',
+        )->yellow();
+    }
+
+    /**
+     * Find the Mailpit binary without shelling out.
+     *
+     * The Homebrew keg path is checked too: `brew install` links it into a
+     * directory that is on an interactive shell's PATH but not always on the
+     * PATH this process inherited.
+     */
+    protected function locateMailpit(): ?string
+    {
+        $candidates = [
+            ...array_map(
+                fn (string $dir): string => rtrim($dir, DIRECTORY_SEPARATOR).'/mailpit',
+                explode(PATH_SEPARATOR, (string) getenv('PATH')),
+            ),
+            '/opt/homebrew/bin/mailpit',
+            '/opt/homebrew/opt/mailpit/bin/mailpit',
+            '/usr/local/bin/mailpit',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate) && is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether something is already listening there — somebody running Mailpit
+     * as a background service, most likely. A refused connection is the answer
+     * we want, so the timeout is short.
+     */
+    protected function portIsTaken(string $host, int $port): bool
+    {
+        $socket = @fsockopen($host, $port, $errno, $error, timeout: 0.2);
+
+        if ($socket === false) {
+            return false;
+        }
+
+        fclose($socket);
+
+        return true;
     }
 
     /**

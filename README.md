@@ -69,8 +69,12 @@ composer run dev    # server + queue worker + vite
 
 Sign in at <http://localhost:8000/login> and add a target. There are no
 passwords: you enter an email address, Creeper emails a six digit code, and
-typing it back signs you in — creating the account if the address is new. With
-`MAIL_MAILER=log` the code is at the bottom of `storage/logs/laravel.log`.
+typing it back signs you in — creating the account if the address is new.
+
+`composer run dev` starts [Mailpit](https://mailpit.axllent.org) alongside the
+server if it is installed (`brew install mailpit`), so the code is waiting at
+<http://localhost:8025>. Without it, set `MAIL_MAILER=log` and read the code out
+of `storage/logs/laravel.log`.
 
 Out of the box `CREEP_DRIVER=llm` reads pages with a model, so it needs a key —
 either `CREEP_LLM_API_KEY` in your `.env`, or one you add under Settings → API
