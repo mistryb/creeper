@@ -1,17 +1,49 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import ApiKeyController from '@/actions/App/Http/Controllers/Settings/ApiKeyController';
 import { Field, FormActions, SectionHeading } from '@/components/ds';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+
+type ProviderOption = {
+    value: string;
+    label: string;
+    placeholder: string;
+};
 
 type Props = {
     hasKey: boolean;
     hint: string | null;
+    provider: string | null;
+    providerLabel: string | null;
+    providers: ProviderOption[];
     required: boolean;
 };
 
-export default function ApiKey({ hasKey, hint, required }: Props) {
+export default function ApiKey({
+    hasKey,
+    hint,
+    provider,
+    providerLabel,
+    providers,
+    required,
+}: Props) {
+    const [selected, setSelected] = useState<string>(
+        provider ?? providers[0]?.value ?? '',
+    );
+
+    const placeholder =
+        providers.find((option) => option.value === selected)?.placeholder ??
+        'sk-...';
+
     return (
         <>
             <Head title="API key" />
@@ -45,6 +77,7 @@ export default function ApiKey({ hasKey, hint, required }: Props) {
                                 Key on file
                             </p>
                             <p className="mt-1 font-mono text-sm tabular-nums">
+                                {providerLabel ? `${providerLabel} · ` : ''}
                                 ••••••••{hint}
                             </p>
                         </div>
@@ -76,6 +109,36 @@ export default function ApiKey({ hasKey, hint, required }: Props) {
                     {({ processing, errors }) => (
                         <>
                             <Field
+                                label="Provider"
+                                htmlFor="provider"
+                                error={errors.provider}
+                                hint="Where Creeper sends your key. Change it and the hint below follows."
+                            >
+                                <Select
+                                    name="provider"
+                                    value={selected}
+                                    onValueChange={setSelected}
+                                >
+                                    <SelectTrigger
+                                        id="provider"
+                                        className="w-full"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {providers.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+
+                            <Field
                                 label={hasKey ? 'Replace key' : 'Add a key'}
                                 htmlFor="api_key"
                                 error={errors.api_key}
@@ -89,7 +152,7 @@ export default function ApiKey({ hasKey, hint, required }: Props) {
                                     autoComplete="off"
                                     spellCheck={false}
                                     className="font-mono text-sm"
-                                    placeholder="sk-ant-..."
+                                    placeholder={placeholder}
                                 />
                             </Field>
 

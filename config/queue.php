@@ -40,7 +40,15 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+
+            /*
+             * This must stay longer than the longest job timeout in the
+             * application, which is `RunCreep::$timeout`. If a job is still
+             * running when its reservation expires, the queue hands the same
+             * job to another worker — which for a creep means creeping the
+             * target twice and paying for it twice.
+             */
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 330),
             'after_commit' => false,
         ],
 

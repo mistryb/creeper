@@ -3,64 +3,75 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\PasswordUpdateRequest;
-use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
-use Laravel\Fortify\Features;
 
+/**
+ * There is no password to change and no second factor to enrol, so the only
+ * thing this screen does is the one thing a very long-lived cookie makes
+ * necessary: revoke every other browser that is still signed in.
+ */
 class SecurityController extends Controller
 {
-    /**
-     * Show the user's security settings page.
-     */
-    public function edit(TwoFactorAuthenticationRequest $request): Response
+    public function edit(Request $request): Response
     {
-        $props = [
-            'canManageTwoFactor' => Features::canManageTwoFactorAuthentication(),
-            'canManagePasskeys' => Features::canManagePasskeys(),
-            'passkeys' => Features::canManagePasskeys()
-                ? $request->user()
-                    ->passkeys()
-                    ->select(['id', 'name', 'credential', 'created_at', 'last_used_at'])
-                    ->latest()
-                    ->get()
-                    ->map(fn ($passkey) => [
-                        'id' => $passkey->id,
-                        'name' => $passkey->name,
-                        'authenticator' => $passkey->authenticator,
-                        'created_at_diff' => $passkey->created_at->diffForHumans(),
-                        'last_used_at_diff' => $passkey->last_used_at?->diffForHumans(),
-                    ])
-                    ->values()
-                    ->all()
-                : [],
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ];
-
-        if (Features::canManageTwoFactorAuthentication()) {
-            $request->ensureStateIsValid();
-
-            $props['twoFactorEnabled'] = $request->user()->hasEnabledTwoFactorAuthentication();
-            $props['requiresConfirmation'] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
-        }
-
-        return Inertia::render('settings/security', $props);
+        return Inertia::render('settings/security', [
+            'otherSessions' => $this->otherSessions($request),
+        ]);
     }
 
     /**
-     * Update the user's password.
+     * Sign out every browser except this one.
+     *
+     * Laravel keeps one remember token per user, so replacing it is what
+     * actually invalidates the long-lived cookies elsewhere; deleting the
+     * session rows only closes sessions that have not yet expired. This
+     * browser is then signed back in against the new token.
      */
-    public function update(PasswordUpdateRequest $request): RedirectResponse
+    public function destroy(Request $request): RedirectResponse
     {
-        $request->user()->update([
-            'password' => $request->password,
+        $user = $request->user();
+
+        $user->forceFill(['remember_token' => Str::random(60)])->save();
+
+        if (config('session.driver') === 'database') {
+            DB::table('sessions')
+                ->where('user_id', $user->id)
+                ->where('id', '!=', $request->session()->getId())
+                ->delete();
+        }
+
+        Auth::login($user, remember: true);
+
+        $request->session()->regenerate();
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Signed out everywhere else.'),
         ]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
+        return to_route('security.edit');
+    }
 
-        return back();
+    /**
+     * How many other browsers hold a live session for this user. Sessions are
+     * only part of the picture — a browser whose session has lapsed can still
+     * return using its remember cookie — so the screen words this carefully.
+     */
+    protected function otherSessions(Request $request): int
+    {
+        if (config('session.driver') !== 'database') {
+            return 0;
+        }
+
+        return DB::table('sessions')
+            ->where('user_id', $request->user()->id)
+            ->where('id', '!=', $request->session()->getId())
+            ->count();
     }
 }

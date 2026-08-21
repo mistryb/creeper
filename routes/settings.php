@@ -5,7 +5,6 @@ use App\Http\Controllers\Settings\ApiKeyController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Middleware\EnsureBillingIsEnabled;
-use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
@@ -13,18 +12,32 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    /*
+     * Confirming a new address. Throttled like the sign-in code it reuses —
+     * six digits is only safe while guessing is slow.
+     */
+    Route::post('settings/profile/email', [ProfileController::class, 'confirmEmail'])
+        ->middleware('throttle:login-verify')
+        ->name('profile.email.confirm');
+
+    Route::delete('settings/profile/email', [ProfileController::class, 'cancelEmail'])
+        ->name('profile.email.cancel');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::get('settings/security', [SecurityController::class, 'edit'])
-        ->middleware(RequirePassword::class)
-        ->name('security.edit');
+    /*
+     * No password to re-enter before reaching this screen: there isn't one. The
+     * only thing here is revoking other browsers, and being signed in on this
+     * one is the whole authority for that.
+     */
+    Route::get('settings/security', [SecurityController::class, 'edit'])->name('security.edit');
 
-    Route::put('settings/password', [SecurityController::class, 'update'])
+    Route::delete('settings/security/sessions', [SecurityController::class, 'destroy'])
         ->middleware('throttle:6,1')
-        ->name('user-password.update');
+        ->name('security.sessions.destroy');
 
     /*
      * The user's own model API key. Writes are throttled because a key is a
@@ -50,10 +63,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('settings/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
     });
 });
-
-Route::get('.well-known/passkey-endpoints', function () {
-    return response()->json([
-        'enroll' => route('security.edit'),
-        'manage' => route('security.edit'),
-    ]);
-})->name('well-known.passkeys');

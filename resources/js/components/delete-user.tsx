@@ -1,9 +1,7 @@
 import { Form } from '@inertiajs/react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import { SectionHeading } from '@/components/ds';
-import InputError from '@/components/input-error';
-import PasswordInput from '@/components/password-input';
+import { Field, SectionHeading } from '@/components/ds';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,19 +12,26 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
-export default function DeleteUser() {
-    const passwordInput = useRef<HTMLInputElement>(null);
+/**
+ * There is no password to ask for, so the confirmation is typing the account's
+ * own address. It is not a secret — it is a speed bump, so that destroying
+ * everything cannot be a misplaced click.
+ */
+export default function DeleteUser({ email }: { email: string }) {
+    const emailInput = useRef<HTMLInputElement>(null);
+    const [typed, setTyped] = useState('');
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             <SectionHeading
                 as="h2"
                 size="sm"
                 title="Delete account"
                 description="Your account and everything Creeper collected for it."
             />
+
             <div className="space-y-4 border border-ribbon-red/35 bg-ribbon-red/8 p-4">
                 <div className="space-y-0.5 text-ribbon-red">
                     <p className="label-mono uppercase">Warning</p>
@@ -35,7 +40,7 @@ export default function DeleteUser() {
                     </p>
                 </div>
 
-                <Dialog>
+                <Dialog onOpenChange={() => setTyped('')}>
                     <DialogTrigger asChild>
                         <Button
                             variant="destructive"
@@ -45,53 +50,49 @@ export default function DeleteUser() {
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <DialogTitle>
-                            Are you sure you want to delete your account?
-                        </DialogTitle>
+                        <DialogTitle>Delete your account?</DialogTitle>
                         <DialogDescription>
-                            Once your account is deleted, all of its resources
-                            and data will also be permanently deleted. Please
-                            enter your password to confirm you would like to
-                            permanently delete your account.
+                            Every target, price history and run log goes with
+                            it, permanently. Type your email address to confirm.
                         </DialogDescription>
 
                         <Form
                             {...ProfileController.destroy.form()}
-                            options={{
-                                preserveScroll: true,
-                            }}
-                            onError={() => passwordInput.current?.focus()}
+                            options={{ preserveScroll: true }}
+                            onError={() => emailInput.current?.focus()}
                             resetOnSuccess
-                            className="space-y-6"
+                            className="space-y-5"
                         >
                             {({ resetAndClearErrors, processing, errors }) => (
                                 <>
-                                    <div className="grid gap-2">
-                                        <Label
-                                            htmlFor="password"
-                                            className="sr-only"
-                                        >
-                                            Password
-                                        </Label>
-
-                                        <PasswordInput
-                                            id="password"
-                                            name="password"
-                                            ref={passwordInput}
-                                            placeholder="Password"
-                                            autoComplete="current-password"
+                                    <Field
+                                        label="Email address"
+                                        htmlFor="delete_email"
+                                        error={errors.email}
+                                    >
+                                        <Input
+                                            id="delete_email"
+                                            name="email"
+                                            type="email"
+                                            ref={emailInput}
+                                            value={typed}
+                                            onChange={(event) =>
+                                                setTyped(event.target.value)
+                                            }
+                                            autoComplete="off"
+                                            placeholder={email}
                                         />
-
-                                        <InputError message={errors.password} />
-                                    </div>
+                                    </Field>
 
                                     <DialogFooter className="gap-2">
                                         <DialogClose asChild>
                                             <Button
                                                 variant="secondary"
-                                                onClick={() =>
-                                                    resetAndClearErrors()
-                                                }
+                                                type="button"
+                                                onClick={() => {
+                                                    resetAndClearErrors();
+                                                    setTyped('');
+                                                }}
                                             >
                                                 Cancel
                                             </Button>
@@ -99,15 +100,15 @@ export default function DeleteUser() {
 
                                         <Button
                                             variant="destructive"
-                                            disabled={processing}
-                                            asChild
+                                            type="submit"
+                                            disabled={
+                                                processing ||
+                                                typed.trim().toLowerCase() !==
+                                                    email.toLowerCase()
+                                            }
+                                            data-test="confirm-delete-user-button"
                                         >
-                                            <button
-                                                type="submit"
-                                                data-test="confirm-delete-user-button"
-                                            >
-                                                Delete account
-                                            </button>
+                                            Delete account
                                         </Button>
                                     </DialogFooter>
                                 </>

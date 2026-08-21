@@ -2,16 +2,22 @@
 
 namespace App\Rules;
 
+use App\Creeping\Fetching\PageFetcher;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Translation\PotentiallyTranslatedString;
 
 /**
  * Rejects URLs that point somewhere they shouldn't.
  *
- * Creeper never fetches these itself — the agent does — but a self-hosted
- * agent usually sits inside a private network, which turns a user-supplied
- * URL into an SSRF vector. Blocking at the point of entry is the cheap fix.
+ * A user-supplied URL is an SSRF vector: the `llm` driver fetches it from
+ * inside the application, and a self-hosted agent usually sits inside a
+ * private network. Blocking at the point of entry is the cheap fix.
+ *
+ * This is the gate, not the whole defence. A host's DNS can change between
+ * being saved and being fetched, so {@see PageFetcher}
+ * re-checks every URL — and every redirect it is sent to — at fetch time.
  *
  * If a hostname can't be resolved at all we let it through: an unresolvable
  * host is unreachable for the agent too, and failing validation on a flaky
@@ -25,6 +31,18 @@ class PublicUrl implements ValidationRule
      * @var array<int, string>
      */
     private const LOCAL_HOSTS = ['localhost', 'localhost.localdomain', 'ip6-localhost', 'ip6-loopback'];
+
+    /**
+     * Whether this rule would let the given URL through.
+     *
+     * The rule is the single definition of "somewhere we're willing to go",
+     * so anything that needs the answer outside validation asks here rather
+     * than reimplementing it.
+     */
+    public static function permits(string $url): bool
+    {
+        return Validator::make(['url' => $url], ['url' => [new self]])->passes();
+    }
 
     /**
      * @param  Closure(string, ?string=): PotentiallyTranslatedString  $fail

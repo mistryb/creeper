@@ -3,6 +3,7 @@
 use App\Billing\RunMeter;
 use App\Creeping\CreepManager;
 use App\Creeping\Drivers\FakeCreepDriver;
+use App\Enums\CreepProvider;
 use App\Enums\RunStatus;
 use App\Jobs\ReportCreepRunUsage;
 use App\Jobs\RunCreep;
@@ -20,7 +21,7 @@ function subscribedUserWithKey(): User
 {
     $user = User::factory()->create();
     subscribe($user);
-    $user->setCreepApiKey('sk-ant-test-key-0000000000');
+    $user->setCreepApiKey('sk-ant-test-key-0000000000', CreepProvider::Anthropic);
 
     return $user->refresh();
 }

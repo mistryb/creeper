@@ -45,6 +45,11 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
+    InputOTP,
+    InputOTPGroup,
+    InputOTPSlot,
+} from '@/components/ui/input-otp';
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -722,6 +727,32 @@ export default function DesignSystem() {
                                         className="font-mono text-sm"
                                     />
                                 </Field>
+
+                                <div className="space-y-2">
+                                    <p className="label-micro text-ink-soft">
+                                        Six digit code
+                                    </p>
+                                    <InputOTP
+                                        maxLength={6}
+                                        value="4071"
+                                        onChange={() => {}}
+                                    >
+                                        <InputOTPGroup>
+                                            {[0, 1, 2, 3, 4, 5].map((slot) => (
+                                                <InputOTPSlot
+                                                    key={slot}
+                                                    index={slot}
+                                                />
+                                            ))}
+                                        </InputOTPGroup>
+                                    </InputOTP>
+                                    <p className="max-w-prose text-xs text-muted-foreground">
+                                        Sign-in codes and address confirmations.
+                                        Set in the dot-matrix face, because a
+                                        code is a figure a machine printed and a
+                                        person is copying back.
+                                    </p>
+                                </div>
 
                                 <CheckField
                                     htmlFor="ds-notify"

@@ -1,118 +1,80 @@
 <?php
 
-namespace Tests\Feature\Settings;
-
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
-use Inertia\Testing\AssertableInertia as Assert;
-use Laravel\Fortify\Features;
-use Tests\TestCase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
-class SecurityTest extends TestCase
-{
-    use RefreshDatabase;
+it('reports no other sessions when sessions are not stored in the database', function () {
+    config(['session.driver' => 'array']);
 
-    public function test_security_page_is_displayed()
-    {
-        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+    $this->actingAs(User::factory()->create())
+        ->get(route('security.edit'))
+        ->assertInertia(fn ($page) => $page->where('otherSessions', 0));
+});
 
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-        ]);
-        Features::passkeys([
-            'confirmPassword' => true,
-        ]);
+it('shows the security page without asking for a password', function () {
+    // There is no password to confirm, so nothing should stand in the way.
+    $this->actingAs(User::factory()->create())
+        ->get(route('security.edit'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('settings/security'));
+});
 
-        $user = User::factory()->create();
+it('counts other live sessions', function () {
+    // Only the database driver keeps a sessions table to count.
+    config(['session.driver' => 'database']);
 
-        $this->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('security.edit'))
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('settings/security')
-                ->where('canManagePasskeys', true)
-                ->where('passkeys', [])
-                ->where('canManageTwoFactor', true)
-                ->where('twoFactorEnabled', false),
-            );
-    }
+    $user = User::factory()->create();
 
-    public function test_security_page_requires_password_confirmation_when_enabled()
-    {
-        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+    DB::table('sessions')->insert([
+        [
+            'id' => 'other-browser',
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'Test',
+            'payload' => '',
+            'last_activity' => now()->getTimestamp(),
+        ],
+    ]);
 
-        $user = User::factory()->create();
+    $this->actingAs($user)
+        ->get(route('security.edit'))
+        ->assertInertia(fn ($page) => $page->where('otherSessions', 1));
+});
 
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-        ]);
+/*
+ * Signing in leaves a cookie good for about a year, so revoking it elsewhere
+ * is the one security control this application actually has.
+ */
+it('signs out other browsers by cycling the remember token', function () {
+    config(['session.driver' => 'database']);
 
-        $response = $this->actingAs($user)
-            ->get(route('security.edit'));
+    $user = User::factory()->create();
+    $token = $user->remember_token;
 
-        $response->assertRedirect(route('password.confirm'));
-    }
+    DB::table('sessions')->insert([
+        [
+            'id' => 'other-browser',
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'Test',
+            'payload' => '',
+            'last_activity' => now()->getTimestamp(),
+        ],
+    ]);
 
-    public function test_security_page_renders_without_two_factor_when_feature_is_disabled()
-    {
-        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+    $response = $this->actingAs($user)
+        ->delete(route('security.sessions.destroy'))
+        ->assertRedirect(route('security.edit'));
 
-        config(['fortify.features' => []]);
+    expect($user->fresh()->remember_token)->not->toBe($token)
+        ->and(DB::table('sessions')->where('id', 'other-browser')->exists())->toBeFalse();
 
-        $user = User::factory()->create();
+    // This browser is handed a cookie for the new token rather than kicked out.
+    $response->assertCookie(Auth::guard('web')->getRecallerName());
+    $this->assertAuthenticatedAs($user->fresh());
+});
 
-        $this->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('security.edit'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('settings/security')
-                ->where('canManagePasskeys', false)
-                ->where('passkeys', [])
-                ->where('canManageTwoFactor', false)
-                ->missing('twoFactorEnabled')
-                ->missing('requiresConfirmation'),
-            );
-    }
-
-    public function test_password_can_be_updated()
-    {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->from(route('security.edit'))
-            ->put(route('user-password.update'), [
-                'current_password' => 'password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('security.edit'));
-
-        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
-    }
-
-    public function test_correct_password_must_be_provided_to_update_password()
-    {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->from(route('security.edit'))
-            ->put(route('user-password.update'), [
-                'current_password' => 'wrong-password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrors('current_password')
-            ->assertRedirect(route('security.edit'));
-    }
-}
+it('keeps guests off the security page', function () {
+    $this->delete(route('security.sessions.destroy'))->assertRedirect(route('login'));
+});

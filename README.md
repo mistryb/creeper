@@ -67,9 +67,17 @@ php artisan db:seed # optional: three demo targets with price history
 composer run dev    # server + queue worker + vite
 ```
 
-Sign up at <http://localhost:8000/register> and add a target. Out of the box
-`CREEP_DRIVER=fake` invents plausible product data, so you can see the whole
-thing work before writing an agent.
+Sign in at <http://localhost:8000/login> and add a target. There are no
+passwords: you enter an email address, Creeper emails a six digit code, and
+typing it back signs you in — creating the account if the address is new. With
+`MAIL_MAILER=log` the code is at the bottom of `storage/logs/laravel.log`.
+
+Out of the box `CREEP_DRIVER=llm` reads pages with a model, so it needs a key —
+either `CREEP_LLM_API_KEY` in your `.env`, or one you add under Settings → API
+key. Without one, runs fail and say so.
+
+To look around before committing to a provider, set `CREEP_DRIVER=fake`. It
+invents plausible product data locally and needs no key at all.
 
 For the schedule to fire, run Laravel's scheduler:
 
@@ -152,6 +160,38 @@ Creeper is deliberately relaxed about shape, because agents vary:
 A payload needs at least a title or a price. Anything less is treated as a
 failed run rather than an empty product card.
 
+### The middle way: let Creeper read the page itself
+
+This is the default. Set a key and there is nothing else to do:
+
+```env
+CREEP_DRIVER=llm
+CREEP_LLM_PROVIDER=anthropic
+CREEP_LLM_API_KEY=sk-ant-…
+```
+
+Three steps per run, all in-process:
+
+1. **Fetch** the page — re-checking the address, and every redirect, against
+   the same public-internet rule that guarded it at submission.
+2. **Reduce** it to the parts worth paying for: any schema.org `Product` block,
+   the `og:`/`product:` metadata, and the visible text, in that order.
+3. **Read** it once with a structured-output call, which returns the product
+   fields and nothing else.
+
+Each user's own key is used when they have added one, along with the provider
+they picked with it, so they pay their model provider directly.
+`CREEP_LLM_API_KEY` is the fallback for a self-hosted install.
+
+**It never runs a browser.** A shop that assembles its price in JavaScript will
+come back thin, and Creeper will record the run as failed rather than store an
+empty product card. Pages that publish schema.org data — most of them — work
+well. If yours doesn't, write a driver.
+
+`CREEP_LLM_MAX_CHARACTERS` is the cost dial: it caps how much page the model is
+asked to read, and so what each run costs. An hourly target is roughly 720 runs
+a month, so it is worth setting deliberately.
+
 ### The thorough way: write a driver
 
 Implement `App\Creeping\Contracts\CreepDriver`:
@@ -210,12 +250,23 @@ limit.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `CREEP_DRIVER` | `fake` | `fake` or `http`, or one you've registered |
+| `CREEP_DRIVER` | `llm` | `llm`, `fake` or `http`, or one you've registered |
 | `CREEP_AGENT_ENDPOINT` | — | Where the `http` driver POSTs |
 | `CREEP_AGENT_TOKEN` | — | Sent as a bearer token |
 | `CREEP_AGENT_TIMEOUT` | `120` | Seconds to wait for a synchronous answer |
+| `CREEP_LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, `gemini`, `groq` or `openrouter` |
+| `CREEP_LLM_MODEL` | — | Blank takes the provider's own default |
+| `CREEP_LLM_API_KEY` | — | Fallback key, for when a user hasn't added their own |
+| `CREEP_LLM_MAX_CHARACTERS` | `12000` | How much page the model reads — the cost dial |
+| `CREEP_LLM_BUDGET` | `70` | Seconds for the whole driver, fetch and inference |
+| `CREEP_LLM_TIMEOUT` | `45` | Seconds for the model call alone |
+| `CREEP_LLM_FETCH_TIMEOUT` | `15` | Seconds to fetch the page, across all redirects |
+| `CREEP_LLM_MAX_BYTES` | `2097152` | Most of a response Creeper will read |
+| `CREEP_LLM_MAX_REDIRECTS` | `3` | Redirects followed before giving up |
+| `CREEP_LLM_PIN_ADDRESS` | `true` | Connect only to the address that was checked |
 | `CREEP_CALLBACK_TTL` | `180` | Minutes a run's signed callback stays valid |
 | `CREEP_RETRIES` | `3` | Attempts before a run is marked failed |
+| `DB_QUEUE_RETRY_AFTER` | `330` | Must exceed the longest job timeout |
 | `BILLING_ENABLED` | `false` | Turns the whole SaaS side on |
 
 ---
@@ -225,8 +276,18 @@ limit.
 Users paste arbitrary URLs, and a self-hosted agent usually sits inside a
 private network. Creeper rejects anything that isn't on the public internet —
 loopback, private ranges, link-local, and non-HTTP schemes — before a target is
-ever saved. **Your agent should check too.** Creeper can only see the URL at
-the moment it's submitted.
+ever saved.
+
+That check alone isn't enough, because a hostname can resolve somewhere else
+later. So the `llm` driver, which fetches pages itself, checks again at fetch
+time: it re-runs the rule, resolves the host over both IPv4 and IPv6, and then
+pins the connection to the exact address it validated, closing the window where
+DNS could change underneath it. Redirects are followed by hand, one hop at a
+time, through that same check — a `302` pointing at `169.254.169.254` gets no
+further than the guard.
+
+**If you write your own driver, do the same.** `App\Rules\PublicUrl::permits()`
+is the one definition of somewhere Creeper is willing to go.
 
 ---
 

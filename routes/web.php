@@ -40,4 +40,5 @@ Route::post('webhooks/creep/{run}', CreepCallbackController::class)
     ->middleware('signed')
     ->name('creep.callback');
 
+require __DIR__.'/auth.php';
 require __DIR__.'/settings.php';

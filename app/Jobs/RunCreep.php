@@ -31,7 +31,13 @@ class RunCreep implements ShouldBeUnique, ShouldQueue
     use Queueable;
 
     /**
-     * Long enough for a slow agent, shorter than `retry_after` in config/queue.php.
+     * Long enough for a slow agent.
+     *
+     * `retry_after` in config/queue.php must stay longer than this. A job that
+     * is still running when its reservation lapses is handed to a second
+     * worker, and two workers creeping one target means paying twice for one
+     * answer. The `llm` driver keeps itself well inside this on its own; the
+     * `http` driver is only bounded by whatever your agent does.
      */
     public int $timeout = 300;
 

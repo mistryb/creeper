@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Validator;
 
 function passesPublicUrl(string $url): bool
 {
-    return Validator::make(['url' => $url], ['url' => [new PublicUrl]])->passes();
+    return PublicUrl::permits($url);
 }
 
 it('accepts an ordinary public URL', function (string $url) {
@@ -44,3 +44,14 @@ it('rejects credentials smuggled into the URL', function () {
 it('rejects something that is not a URL at all', function () {
     expect(passesPublicUrl('not a url'))->toBeFalse();
 });
+
+it('gives the same answer as the rule it wraps', function (string $url) {
+    expect(PublicUrl::permits($url))->toBe(
+        Validator::make(['url' => $url], ['url' => [new PublicUrl]])->passes(),
+    );
+})->with([
+    'https://example.com/products/kettle',
+    'http://127.0.0.1/p/1',
+    'ftp://example.com',
+    'not a url at all',
+]);

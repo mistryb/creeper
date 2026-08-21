@@ -1,24 +1,21 @@
 import { Form, Head } from '@inertiajs/react';
-import { useRef } from 'react';
+import { MonitorSmartphone } from 'lucide-react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
-import { Field, FormActions, SectionHeading } from '@/components/ds';
-import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys';
-import ManagePasskeys from '@/components/manage-passkeys';
-import type { Props as ManageTwoFactorProps } from '@/components/manage-two-factor';
-import ManageTwoFactor from '@/components/manage-two-factor';
-import PasswordInput from '@/components/password-input';
+import { EmptyState, FormActions, SectionHeading } from '@/components/ds';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { edit } from '@/routes/security';
 
 type Props = {
-    passwordRules: string;
-} & ManagePasskeysProps &
-    ManageTwoFactorProps;
+    otherSessions: number;
+};
 
-export default function Security(props: Props) {
-    const passwordInput = useRef<HTMLInputElement>(null);
-    const currentPasswordInput = useRef<HTMLInputElement>(null);
-
+/**
+ * There is no password to change and no second factor to enrol. The one thing
+ * worth having here is a way to cut off other browsers, because signing in
+ * leaves a cookie that lasts about a year.
+ */
+export default function Security({ otherSessions }: Props) {
     return (
         <>
             <Head title="Security settings" />
@@ -29,100 +26,63 @@ export default function Security(props: Props) {
                 <SectionHeading
                     as="h2"
                     size="sm"
-                    title="Password"
-                    description="A long, random password is the one that keeps working."
+                    title="Security"
+                    description="Creeper has no passwords. You sign in with a code emailed to your address, and this browser stays signed in afterwards."
                 />
 
+                <Alert>
+                    <AlertTitle>How signing in works</AlertTitle>
+                    <AlertDescription>
+                        <p>
+                            Whoever can read email at your address can sign in,
+                            so there is nothing else to configure — and nothing
+                            else standing in the way. Keep that mailbox secure.
+                        </p>
+                    </AlertDescription>
+                </Alert>
+
+                {otherSessions === 0 ? (
+                    <EmptyState
+                        icon={MonitorSmartphone}
+                        title="No other browsers"
+                    >
+                        This is the only browser with a live session. Others may
+                        still return using a stored cookie — sign out everywhere
+                        below if you have lost a device.
+                    </EmptyState>
+                ) : (
+                    <div className="border border-rule bg-card px-4 py-3 shadow-xs">
+                        <p className="label-micro text-muted-foreground">
+                            Other live sessions
+                        </p>
+                        <p className="mt-2 numeral-dot text-4xl">
+                            {otherSessions.toLocaleString()}
+                        </p>
+                    </div>
+                )}
+
                 <Form
-                    {...SecurityController.update.form()}
-                    options={{
-                        preserveScroll: true,
-                    }}
-                    resetOnError={[
-                        'password',
-                        'password_confirmation',
-                        'current_password',
-                    ]}
-                    resetOnSuccess
-                    onError={(errors) => {
-                        if (errors.password) {
-                            passwordInput.current?.focus();
-                        }
-
-                        if (errors.current_password) {
-                            currentPasswordInput.current?.focus();
-                        }
-                    }}
-                    className="space-y-5"
+                    {...SecurityController.destroy.form()}
+                    options={{ preserveScroll: true }}
                 >
-                    {({ errors, processing }) => (
-                        <>
-                            <Field
-                                label="Current password"
-                                htmlFor="current_password"
-                                error={errors.current_password}
+                    {({ processing }) => (
+                        <FormActions>
+                            <Button
+                                type="submit"
+                                variant="secondary"
+                                disabled={processing}
+                                data-test="sign-out-others-button"
                             >
-                                <PasswordInput
-                                    id="current_password"
-                                    ref={currentPasswordInput}
-                                    name="current_password"
-                                    autoComplete="current-password"
-                                    placeholder="Current password"
-                                />
-                            </Field>
-
-                            <Field
-                                label="New password"
-                                htmlFor="password"
-                                error={errors.password}
-                            >
-                                <PasswordInput
-                                    id="password"
-                                    ref={passwordInput}
-                                    name="password"
-                                    autoComplete="new-password"
-                                    placeholder="New password"
-                                    passwordrules={props.passwordRules}
-                                />
-                            </Field>
-
-                            <Field
-                                label="Confirm password"
-                                htmlFor="password_confirmation"
-                                error={errors.password_confirmation}
-                            >
-                                <PasswordInput
-                                    id="password_confirmation"
-                                    name="password_confirmation"
-                                    autoComplete="new-password"
-                                    placeholder="Confirm password"
-                                    passwordrules={props.passwordRules}
-                                />
-                            </Field>
-
-                            <FormActions>
-                                <Button
-                                    disabled={processing}
-                                    data-test="update-password-button"
-                                >
-                                    Save
-                                </Button>
-                            </FormActions>
-                        </>
+                                Sign out everywhere else
+                            </Button>
+                            <p className="max-w-sm text-xs text-muted-foreground">
+                                Revokes the stored cookie on every other
+                                browser. This one stays signed in.
+                            </p>
+                        </FormActions>
                     )}
                 </Form>
             </div>
-
-            <ManageTwoFactor
-                canManageTwoFactor={props.canManageTwoFactor}
-                requiresConfirmation={props.requiresConfirmation}
-                twoFactorEnabled={props.twoFactorEnabled}
-            />
-
-            <ManagePasskeys
-                canManagePasskeys={props.canManagePasskeys}
-                passkeys={props.passkeys}
-            />
         </>
     );
 }

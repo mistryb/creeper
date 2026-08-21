@@ -1,99 +1,167 @@
 <?php
 
-namespace Tests\Feature\Settings;
-
+use App\Models\LoginCode;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use App\Notifications\LoginCodeNotification;
+use Illuminate\Support\Facades\Notification;
 
-class ProfileUpdateTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(fn () => Notification::fake());
 
-    public function test_profile_page_is_displayed()
-    {
-        $user = User::factory()->create();
+it('shows the profile page', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('profile.edit'))
+        ->assertOk();
+});
 
-        $response = $this
-            ->actingAs($user)
-            ->get(route('profile.edit'));
+it('updates a name without touching the address', function () {
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
-        $response->assertOk();
-    }
+    $this->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => 'Jane Doe',
+            'email' => 'jane@example.com',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
 
-    public function test_profile_information_can_be_updated()
-    {
-        $user = User::factory()->create();
+    $user->refresh();
 
-        $response = $this
-            ->actingAs($user)
-            ->patch(route('profile.update'), [
-                'name' => 'Test User',
-                'email' => 'test@example.com',
-            ]);
+    expect($user->name)->toBe('Jane Doe')
+        ->and($user->email)->toBe('jane@example.com')
+        ->and($user->pending_email)->toBeNull()
+        ->and($user->email_verified_at)->not->toBeNull();
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
+    Notification::assertNothingSent();
+});
 
-        $user->refresh();
+/*
+ * The address is the only credential, so a change cannot be allowed to take
+ * effect on trust — a typo would lock the account for good.
+ */
+it('parks a new address and emails a code to it', function () {
+    $user = User::factory()->create(['email' => 'jane@example.com']);
 
-        $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
-    }
+    $this->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'new@example.com',
+        ])
+        ->assertSessionHasNoErrors();
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged()
-    {
-        $user = User::factory()->create();
+    $user->refresh();
 
-        $response = $this
-            ->actingAs($user)
-            ->patch(route('profile.update'), [
-                'name' => 'Test User',
-                'email' => $user->email,
-            ]);
+    expect($user->email)->toBe('jane@example.com')
+        ->and($user->pending_email)->toBe('new@example.com');
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
+    Notification::assertSentOnDemandTimes(LoginCodeNotification::class, 1);
+    expect(LoginCode::query()->find('new@example.com'))->not->toBeNull();
+});
 
-        $this->assertNotNull($user->refresh()->email_verified_at);
-    }
+it('applies the new address once its code comes back', function () {
+    $user = User::factory()->changingEmailTo('new@example.com')->create([
+        'email' => 'jane@example.com',
+    ]);
 
-    public function test_user_can_delete_their_account()
-    {
-        $user = User::factory()->create();
+    LoginCode::factory()->forEmail('new@example.com', '123456')->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->delete(route('profile.destroy'), [
-                'password' => 'password',
-            ]);
+    $this->actingAs($user)
+        ->post(route('profile.email.confirm'), ['code' => '123456'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('home'));
+    $user->refresh();
 
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
-    }
+    expect($user->email)->toBe('new@example.com')
+        ->and($user->pending_email)->toBeNull()
+        ->and($user->email_verified_at)->not->toBeNull();
+});
 
-    public function test_correct_password_must_be_provided_to_delete_account()
-    {
-        $user = User::factory()->create();
+it('keeps the old address when the code is wrong', function () {
+    $user = User::factory()->changingEmailTo('new@example.com')->create([
+        'email' => 'jane@example.com',
+    ]);
 
-        $response = $this
-            ->actingAs($user)
-            ->from(route('profile.edit'))
-            ->delete(route('profile.destroy'), [
-                'password' => 'wrong-password',
-            ]);
+    LoginCode::factory()->forEmail('new@example.com', '123456')->create();
 
-        $response
-            ->assertSessionHasErrors('password')
-            ->assertRedirect(route('profile.edit'));
+    $this->actingAs($user)
+        ->from(route('profile.edit'))
+        ->post(route('profile.email.confirm'), ['code' => '999999'])
+        ->assertSessionHasErrors('code');
 
-        $this->assertNotNull($user->fresh());
-    }
-}
+    $user->refresh();
+
+    expect($user->email)->toBe('jane@example.com')
+        ->and($user->pending_email)->toBe('new@example.com');
+});
+
+it('abandons a change rather than colliding with an address taken meanwhile', function () {
+    User::factory()->create(['email' => 'new@example.com']);
+
+    $user = User::factory()->changingEmailTo('new@example.com')->create([
+        'email' => 'jane@example.com',
+    ]);
+
+    LoginCode::factory()->forEmail('new@example.com', '123456')->create();
+
+    $this->actingAs($user)
+        ->from(route('profile.edit'))
+        ->post(route('profile.email.confirm'), ['code' => '123456'])
+        ->assertSessionHasErrors('code');
+
+    $user->refresh();
+
+    expect($user->email)->toBe('jane@example.com')
+        ->and($user->pending_email)->toBeNull();
+});
+
+it('cancels a pending change and throws away its code', function () {
+    $user = User::factory()->changingEmailTo('new@example.com')->create();
+
+    LoginCode::factory()->forEmail('new@example.com', '123456')->create();
+
+    $this->actingAs($user)
+        ->delete(route('profile.email.cancel'))
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->refresh()->pending_email)->toBeNull()
+        ->and(LoginCode::query()->find('new@example.com'))->toBeNull();
+});
+
+it('rejects an address already on another account', function () {
+    User::factory()->create(['email' => 'taken@example.com']);
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->from(route('profile.edit'))
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'taken@example.com',
+        ])
+        ->assertSessionHasErrors('email');
+
+    expect($user->refresh()->pending_email)->toBeNull();
+});
+
+it('deletes the account when its own address is typed back', function () {
+    $user = User::factory()->create(['email' => 'jane@example.com']);
+
+    $this->actingAs($user)
+        ->delete(route('profile.destroy'), ['email' => 'jane@example.com'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('home'));
+
+    $this->assertGuest();
+    expect($user->fresh())->toBeNull();
+});
+
+it('refuses to delete the account on the wrong address', function () {
+    $user = User::factory()->create(['email' => 'jane@example.com']);
+
+    $this->actingAs($user)
+        ->from(route('profile.edit'))
+        ->delete(route('profile.destroy'), ['email' => 'someone@example.com'])
+        ->assertSessionHasErrors('email')
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->fresh())->not->toBeNull();
+});

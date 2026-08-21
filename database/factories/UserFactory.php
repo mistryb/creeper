@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
@@ -13,12 +12,10 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
-
-    /**
      * Define the model's default state.
+     *
+     * There is no password: accounts are reached with a one-time code sent to
+     * the address, and the column only survives as a nullable relic.
      *
      * @return array<string, mixed>
      */
@@ -28,33 +25,29 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
+            'pending_email' => null,
+            'remember_token' => Str::random(60),
         ];
     }
 
     /**
      * Indicate that the model's email address should be unverified.
+     *
+     * Only reachable for accounts that predate code sign-in — redeeming a code
+     * is what creates an account now, so new ones are verified on arrival.
      */
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes): array => [
             'email_verified_at' => null,
         ]);
     }
 
-    /**
-     * Indicate that the model has two-factor authentication configured.
-     */
-    public function withTwoFactor(): static
+    /** An account midway through changing its address. */
+    public function changingEmailTo(string $email): static
     {
-        return $this->state(fn (array $attributes) => [
-            'two_factor_secret' => encrypt('secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
-            'two_factor_confirmed_at' => now(),
+        return $this->state(fn (array $attributes): array => [
+            'pending_email' => $email,
         ]);
     }
 }

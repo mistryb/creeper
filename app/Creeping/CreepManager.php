@@ -5,6 +5,8 @@ namespace App\Creeping;
 use App\Creeping\Contracts\CreepDriver;
 use App\Creeping\Drivers\FakeCreepDriver;
 use App\Creeping\Drivers\HttpCreepDriver;
+use App\Creeping\Drivers\LlmCreepDriver;
+use App\Creeping\Fetching\PageFetcher;
 use Illuminate\Support\Manager;
 
 /**
@@ -33,5 +35,13 @@ class CreepManager extends Manager
         $config = $this->config->get('creeping.drivers.http', []);
 
         return new HttpCreepDriver($config);
+    }
+
+    public function createLlmDriver(): CreepDriver
+    {
+        /** @var array<string, mixed> $config */
+        $config = $this->config->get('creeping.drivers.llm', []);
+
+        return new LlmCreepDriver($config, new PageFetcher($config));
     }
 }

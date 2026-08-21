@@ -17,7 +17,7 @@ import {
     Terminal,
 } from '@/components/ds';
 import { Button } from '@/components/ui/button';
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login } from '@/routes';
 import { create } from '@/routes/creep-targets';
 
 /**
@@ -191,7 +191,7 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
     const { typed, revealed } = useExampleRun();
     const includedRuns = pricing.included_runs.toLocaleString();
 
-    const signUpHref = auth.user ? create() : register();
+    const signUpHref = auth.user ? create() : login();
 
     const startWatching = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
