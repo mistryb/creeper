@@ -1,7 +1,8 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import BillingController from '@/actions/App/Http/Controllers/BillingController';
-import Heading from '@/components/heading';
+import { Meter, ReceiptRow, SectionHeading, StatTile } from '@/components/ds';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { edit as editApiKey } from '@/routes/api-key';
 import { portal } from '@/routes/billing';
 import type { BillingPlan } from '@/types';
@@ -37,10 +38,6 @@ export default function Billing({
     subscribed,
 }: Props) {
     const included = usage.included_runs;
-    const usedPercent =
-        included && included > 0
-            ? Math.min(100, (usage.runs / included) * 100)
-            : 0;
 
     return (
         <>
@@ -49,146 +46,176 @@ export default function Billing({
             <h1 className="sr-only">Billing settings</h1>
 
             <div className="space-y-6">
-                <Heading
-                    variant="small"
+                <SectionHeading
+                    as="h2"
+                    size="sm"
                     title="Billing"
-                    description="Your plan and what you have used this month"
-                />
-
-                <div className="rounded-lg border border-border p-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm text-muted-foreground">
-                                Current plan
-                            </p>
-                            <p className="text-lg font-medium">
-                                {plan.name}
-                                {plan.price ? ` · ${plan.price}` : ''}
-                            </p>
-                        </div>
-
-                        {subscribed && (
-                            <Button variant="outline" asChild>
+                    note="Your plan, and what you have used this month"
+                    actions={
+                        subscribed && (
+                            <Button variant="outline" size="sm" asChild>
                                 <Link href={portal()}>Manage subscription</Link>
                             </Button>
-                        )}
-                    </div>
+                        )
+                    }
+                />
 
-                    {included !== null && (
-                        <div className="mt-5 space-y-1">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">
-                                    Checks this month
-                                </span>
-                                <span className="tabular-nums">
-                                    {usage.runs.toLocaleString()} of{' '}
-                                    {included.toLocaleString()} included
-                                </span>
-                            </div>
-
-                            <div
-                                className="h-1.5 overflow-hidden rounded-full bg-muted"
-                                role="progressbar"
-                                aria-valuenow={usage.runs}
-                                aria-valuemin={0}
-                                aria-valuemax={included}
-                                aria-label="Checks used this month"
-                            >
-                                <div
-                                    className="h-full rounded-full bg-primary"
-                                    style={{ width: `${usedPercent}%` }}
-                                />
-                            </div>
-
-                            <p className="pt-1 text-sm text-muted-foreground">
-                                {usage.overage_runs > 0 ? (
-                                    <>
-                                        {usage.overage_runs.toLocaleString()}{' '}
-                                        extra{' '}
-                                        {usage.overage_runs === 1
-                                            ? 'check'
-                                            : 'checks'}{' '}
-                                        so far, adding{' '}
-                                        <span className="font-medium text-foreground tabular-nums">
-                                            {money(usage.overage_amount)}
-                                        </span>{' '}
-                                        to your next invoice.
-                                    </>
-                                ) : (
-                                    <>
-                                        Extra checks are{' '}
-                                        {money(overageUnitAmount)} each once the
-                                        allowance runs out.
-                                    </>
-                                )}
-                            </p>
-                        </div>
-                    )}
-
-                    <div className="mt-4 flex justify-between border-t border-border pt-4 text-sm">
-                        <span className="text-muted-foreground">
-                            Creep targets
-                        </span>
-                        <span className="tabular-nums">
-                            {usage.targets}
-                            {usage.limit !== null && ` of ${usage.limit}`}
-                        </span>
-                    </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <StatTile
+                        label="Checks this month"
+                        value={usage.runs.toLocaleString()}
+                        tone={usage.overage_runs > 0 ? 'warn' : 'default'}
+                        note={
+                            included === null
+                                ? plan.name
+                                : `of ${included.toLocaleString()} included`
+                        }
+                    />
+                    <StatTile
+                        label="Creep targets"
+                        value={usage.targets.toLocaleString()}
+                        note={
+                            usage.limit === null
+                                ? 'no limit on your plan'
+                                : `of ${usage.limit.toLocaleString()} allowed`
+                        }
+                    />
                 </div>
 
-                {!hasApiKey && (
-                    <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 p-4">
-                        <p className="text-sm text-muted-foreground">
-                            Creeper runs on your own model API key, and you do
-                            not have one on file yet.
-                        </p>
-                        <Button variant="outline" asChild>
-                            <Link href={editApiKey()}>Add a key</Link>
-                        </Button>
-                    </div>
-                )}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>
+                            {plan.name}
+                            {plan.price ? ` · ${plan.price}` : ''}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                        {included !== null && (
+                            <>
+                                <Meter
+                                    label="Checks used"
+                                    value={usage.runs}
+                                    max={included}
+                                    valueLabel={`${usage.runs.toLocaleString()} of ${included.toLocaleString()}`}
+                                />
+
+                                <p className="text-sm text-muted-foreground">
+                                    {usage.overage_runs > 0 ? (
+                                        <>
+                                            {usage.overage_runs.toLocaleString()}{' '}
+                                            extra{' '}
+                                            {usage.overage_runs === 1
+                                                ? 'check'
+                                                : 'checks'}{' '}
+                                            so far, adding{' '}
+                                            <span className="font-mono font-medium text-foreground tabular-nums">
+                                                {money(usage.overage_amount)}
+                                            </span>{' '}
+                                            to your next invoice.
+                                        </>
+                                    ) : (
+                                        <>
+                                            Extra checks are{' '}
+                                            {money(overageUnitAmount)} each once
+                                            the allowance runs out.
+                                        </>
+                                    )}
+                                </p>
+                            </>
+                        )}
+
+                        {!hasApiKey && (
+                            <div className="flex flex-wrap items-center justify-between gap-4 border border-ribbon-amber/35 bg-ribbon-amber/8 px-4 py-3">
+                                <p className="max-w-sm text-sm text-ribbon-amber">
+                                    Creeper runs on your own model API key, and
+                                    you do not have one on file yet.
+                                </p>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={editApiKey()}>Add a key</Link>
+                                </Button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {!subscribed && offer && (
-                    <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
-                        <div>
-                            <p className="font-medium">{offer.name}</p>
-                            <p className="text-2xl font-semibold">
-                                {offer.price ?? '—'}
-                            </p>
-                        </div>
-
-                        <ul className="flex-1 space-y-1 text-sm text-muted-foreground">
-                            <li>
-                                {offer.targets === null
-                                    ? 'Unlimited creep targets'
-                                    : `${offer.targets} creep targets`}
-                            </li>
-                            <li>
-                                Creep as often as{' '}
-                                {offer.min_frequency ?? 'daily'}
-                            </li>
-                            <li>
-                                {offer.included_runs?.toLocaleString() ?? 0}{' '}
-                                checks included, then {money(overageUnitAmount)}{' '}
-                                each
-                            </li>
-                            <li>Your own model API key, billed to you</li>
-                        </ul>
-
-                        <Form
-                            {...BillingController.checkout.form({
-                                plan: offer.key,
-                            })}
-                        >
-                            {({ processing }) => (
-                                <Button type="submit" disabled={processing}>
-                                    Subscribe
-                                </Button>
-                            )}
-                        </Form>
-                    </div>
+                    <Offer
+                        offer={offer}
+                        overageUnitAmount={overageUnitAmount}
+                    />
                 )}
             </div>
         </>
+    );
+}
+
+/**
+ * The upgrade, printed as the landing page's receipt: one line item per thing
+ * you get, then the total.
+ */
+function Offer({
+    offer,
+    overageUnitAmount,
+}: {
+    offer: BillingPlan;
+    overageUnitAmount: number;
+}) {
+    return (
+        <div className="border border-ink bg-white px-5 py-6 font-mono text-[0.8125rem] tabular-nums shadow-stamp-sm">
+            <div className="border-b border-dashed border-rule pb-3.5 text-center">
+                <strong className="block font-semibold tracking-[0.22em] uppercase">
+                    {offer.name}
+                </strong>
+                <span className="text-[0.6875rem] tracking-[0.1em] text-ink-soft uppercase">
+                    One line item, every month
+                </span>
+            </div>
+
+            <div className="space-y-3 py-4">
+                <ReceiptRow
+                    label="Creep targets"
+                    value={
+                        offer.targets === null
+                            ? 'unlimited'
+                            : offer.targets.toLocaleString()
+                    }
+                />
+                <ReceiptRow
+                    label="Creep as often as"
+                    value={offer.min_frequency ?? 'daily'}
+                />
+                <ReceiptRow
+                    label="Checks included"
+                    value={`${offer.included_runs?.toLocaleString() ?? 0} / mo`}
+                />
+                <ReceiptRow
+                    label="Extra checks"
+                    value={`${money(overageUnitAmount)} each`}
+                />
+                <ReceiptRow label="Model API key" value="yours" />
+            </div>
+
+            <div className="flex items-end justify-between gap-3 border-t border-dashed border-rule pt-4">
+                <span className="label-micro text-ink-soft">Total due</span>
+                <span className="numeral-dot text-3xl">
+                    {offer.price ?? '—'}
+                </span>
+            </div>
+
+            <Form
+                {...BillingController.checkout.form({ plan: offer.key })}
+                className="mt-5"
+            >
+                {({ processing }) => (
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={processing}
+                    >
+                        Subscribe
+                    </Button>
+                )}
+            </Form>
+        </div>
     );
 }

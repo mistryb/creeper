@@ -26,8 +26,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('user-password.update');
 
-    Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
-
     /*
      * The user's own model API key. Writes are throttled because a key is a
      * credential, and swapping one repeatedly is never a legitimate rhythm.

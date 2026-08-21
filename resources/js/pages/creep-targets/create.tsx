@@ -1,11 +1,16 @@
 import { Form, Head } from '@inertiajs/react';
 import CreepTargetController from '@/actions/App/Http/Controllers/CreepTargetController';
-import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
+import {
+    CheckField,
+    Field,
+    FormActions,
+    Page,
+    SectionHeading,
+} from '@/components/ds';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -27,63 +32,68 @@ export default function CreateCreepTarget({
         <>
             <Head title="New creep target" />
 
-            <div className="px-4 py-6">
-                <Heading
-                    title="New creep target"
-                    description="Paste a product URL. Creeper takes it from there."
+            <Page>
+                <SectionHeading
+                    title="New target"
+                    note="Paste a product URL — Creeper takes it from there"
                 />
 
-                <div className="max-w-xl">
+                <div className="max-w-xl space-y-6">
                     {targetsRemaining !== null && (
-                        <p className="mb-6 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                            {targetsRemaining === 0
-                                ? 'You have used every target on your plan.'
-                                : `${targetsRemaining} target${targetsRemaining === 1 ? '' : 's'} left on your plan.`}
-                        </p>
+                        <Alert
+                            variant={
+                                targetsRemaining === 0 ? 'warning' : 'default'
+                            }
+                        >
+                            <AlertDescription>
+                                {targetsRemaining === 0
+                                    ? 'You have used every target on your plan.'
+                                    : `${targetsRemaining} target${targetsRemaining === 1 ? '' : 's'} left on your plan.`}
+                            </AlertDescription>
+                        </Alert>
                     )}
 
                     <Form
                         {...CreepTargetController.store.form()}
-                        className="space-y-6"
+                        className="space-y-5"
                     >
                         {({ processing, errors }) => (
                             <>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="url">Product URL</Label>
+                                <Field
+                                    label="Product URL"
+                                    htmlFor="url"
+                                    error={errors.url}
+                                    hint="The page for a single product, not a search or category listing."
+                                >
                                     <Input
                                         id="url"
                                         name="url"
                                         type="url"
                                         required
                                         autoFocus
+                                        className="font-mono text-sm"
                                         placeholder="https://example.com/products/kettle"
                                     />
-                                    <p className="text-xs text-muted-foreground">
-                                        The page for a single product, not a
-                                        search or category listing.
-                                    </p>
-                                    <InputError message={errors.url} />
-                                </div>
+                                </Field>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">
-                                        Name{' '}
-                                        <span className="font-normal text-muted-foreground">
-                                            (optional)
-                                        </span>
-                                    </Label>
+                                <Field
+                                    label="Name"
+                                    htmlFor="name"
+                                    optional
+                                    error={errors.name}
+                                >
                                     <Input
                                         id="name"
                                         name="name"
                                         placeholder="What you want to call it"
                                     />
-                                    <InputError message={errors.name} />
-                                </div>
+                                </Field>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="frequency">
-                                        How often should Creeper check?
-                                    </Label>
+                                <Field
+                                    label="How often should Creeper check?"
+                                    htmlFor="frequency"
+                                    error={errors.frequency}
+                                >
                                     <Select
                                         name="frequency"
                                         defaultValue={
@@ -110,42 +120,34 @@ export default function CreateCreepTarget({
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <InputError message={errors.frequency} />
-                                </div>
+                                </Field>
 
-                                <div className="flex items-start gap-3">
-                                    <Checkbox
-                                        id="notify_on_change"
-                                        name="notify_on_change"
-                                        value="1"
-                                        defaultChecked
-                                    />
-                                    <div className="grid gap-1">
-                                        <Label
-                                            htmlFor="notify_on_change"
-                                            className="font-normal"
-                                        >
-                                            Email me when something changes
-                                        </Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Price moves and stock flips only —
-                                            not review counts.
-                                        </p>
-                                    </div>
-                                </div>
+                                <CheckField
+                                    htmlFor="notify_on_change"
+                                    label="Email me when something changes"
+                                    hint="Price moves and stock flips only — not review counts."
+                                    control={
+                                        <Checkbox
+                                            id="notify_on_change"
+                                            name="notify_on_change"
+                                            value="1"
+                                            defaultChecked
+                                        />
+                                    }
+                                />
 
-                                <div className="flex items-center gap-3">
+                                <FormActions>
                                     <Button type="submit" disabled={processing}>
                                         {processing
                                             ? 'Starting…'
                                             : 'Start creeping'}
                                     </Button>
-                                </div>
+                                </FormActions>
                             </>
                         )}
                     </Form>
                 </div>
-            </div>
+            </Page>
         </>
     );
 }

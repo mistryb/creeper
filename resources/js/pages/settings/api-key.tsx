@@ -1,10 +1,9 @@
 import { Form, Head } from '@inertiajs/react';
 import ApiKeyController from '@/actions/App/Http/Controllers/Settings/ApiKeyController';
-import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
+import { Field, FormActions, SectionHeading } from '@/components/ds';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 type Props = {
     hasKey: boolean;
@@ -19,28 +18,33 @@ export default function ApiKey({ hasKey, hint, required }: Props) {
 
             <h1 className="sr-only">API key settings</h1>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
+            <div className="space-y-5">
+                <SectionHeading
+                    as="h2"
+                    size="sm"
                     title="API key"
-                    description="Creeper reads pages with your key, so you pay your model provider directly"
+                    description="Creeper reads pages with your key, so you pay your model provider directly."
                 />
 
                 {required && !hasKey && (
-                    <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                        Creeping is paused until you add a key. Your targets
-                        stay exactly as they are and pick back up as soon as one
-                        is on file.
-                    </p>
+                    <Alert variant="warning">
+                        <AlertTitle>Creeping is paused</AlertTitle>
+                        <AlertDescription>
+                            <p>
+                                Your targets stay exactly as they are and pick
+                                back up as soon as a key is on file.
+                            </p>
+                        </AlertDescription>
+                    </Alert>
                 )}
 
                 {hasKey && (
-                    <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4 border border-rule bg-card px-4 py-3 shadow-xs">
                         <div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="label-micro text-muted-foreground">
                                 Key on file
                             </p>
-                            <p className="font-mono text-sm tabular-nums">
+                            <p className="mt-1 font-mono text-sm tabular-nums">
                                 ••••••••{hint}
                             </p>
                         </div>
@@ -53,6 +57,7 @@ export default function ApiKey({ hasKey, hint, required }: Props) {
                                 <Button
                                     type="submit"
                                     variant="outline"
+                                    size="sm"
                                     disabled={processing}
                                 >
                                     Remove
@@ -66,15 +71,16 @@ export default function ApiKey({ hasKey, hint, required }: Props) {
                     {...ApiKeyController.update.form()}
                     options={{ preserveScroll: true }}
                     resetOnSuccess
-                    className="space-y-6"
+                    className="space-y-5"
                 >
                     {({ processing, errors }) => (
                         <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="api_key">
-                                    {hasKey ? 'Replace key' : 'Add a key'}
-                                </Label>
-
+                            <Field
+                                label={hasKey ? 'Replace key' : 'Add a key'}
+                                htmlFor="api_key"
+                                error={errors.api_key}
+                                hint="Stored encrypted and only ever sent to the creeping agent. We never show it again after you save it."
+                            >
                                 <Input
                                     id="api_key"
                                     name="api_key"
@@ -82,25 +88,16 @@ export default function ApiKey({ hasKey, hint, required }: Props) {
                                     required
                                     autoComplete="off"
                                     spellCheck={false}
-                                    className="mt-1 block w-full font-mono"
+                                    className="font-mono text-sm"
                                     placeholder="sk-ant-..."
                                 />
+                            </Field>
 
-                                <p className="text-xs text-muted-foreground">
-                                    Stored encrypted and only ever sent to the
-                                    creeping agent. We never show it again after
-                                    you save it.
-                                </p>
-
-                                <InputError
-                                    className="mt-2"
-                                    message={errors.api_key}
-                                />
-                            </div>
-
-                            <Button type="submit" disabled={processing}>
-                                Save key
-                            </Button>
+                            <FormActions>
+                                <Button type="submit" disabled={processing}>
+                                    Save key
+                                </Button>
+                            </FormActions>
                         </>
                     )}
                 </Form>

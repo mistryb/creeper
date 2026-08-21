@@ -11,8 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import type { Availability, RunStatus, TargetStatus } from '@/types';
 
 /**
- * Every badge pairs its colour with an icon and a word, so state is never
- * carried by colour alone.
+ * Every badge pairs its ribbon colour with an icon and a word, so state is
+ * never carried by colour alone. The tones come from Badge's variants rather
+ * than from ad-hoc classes: green is ordinary, amber wants attention, red is
+ * damage, grey is "not known yet".
  */
 
 export function AvailabilityBadge({
@@ -23,33 +25,14 @@ export function AvailabilityBadge({
     label: string;
 }) {
     const config = {
-        in_stock: {
-            variant: 'outline' as const,
-            className:
-                'border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-            Icon: CheckCircle2,
-        },
-        out_of_stock: {
-            variant: 'outline' as const,
-            className:
-                'border-rose-600/30 bg-rose-500/10 text-rose-700 dark:text-rose-400',
-            Icon: CircleSlash,
-        },
-        preorder: {
-            variant: 'outline' as const,
-            className:
-                'border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-            Icon: Clock,
-        },
-        unknown: {
-            variant: 'secondary' as const,
-            className: '',
-            Icon: CircleDashed,
-        },
+        in_stock: { variant: 'ok' as const, Icon: CheckCircle2 },
+        out_of_stock: { variant: 'bad' as const, Icon: CircleSlash },
+        preorder: { variant: 'warn' as const, Icon: Clock },
+        unknown: { variant: 'muted' as const, Icon: CircleDashed },
     }[availability];
 
     return (
-        <Badge variant={config.variant} className={config.className}>
+        <Badge variant={config.variant}>
             <config.Icon aria-hidden />
             {label}
         </Badge>
@@ -64,9 +47,9 @@ export function TargetStatusBadge({
     label: string;
 }) {
     const config = {
-        active: { variant: 'secondary' as const, Icon: CheckCircle2 },
-        paused: { variant: 'outline' as const, Icon: PauseCircle },
-        failed: { variant: 'destructive' as const, Icon: TriangleAlert },
+        active: { variant: 'ok' as const, Icon: CheckCircle2 },
+        paused: { variant: 'muted' as const, Icon: PauseCircle },
+        failed: { variant: 'bad' as const, Icon: TriangleAlert },
     }[status];
 
     return (
@@ -85,10 +68,10 @@ export function RunStatusBadge({
     label: string;
 }) {
     const config = {
-        queued: { variant: 'outline' as const, Icon: CircleDashed },
-        running: { variant: 'outline' as const, Icon: LoaderCircle },
-        succeeded: { variant: 'secondary' as const, Icon: CheckCircle2 },
-        failed: { variant: 'destructive' as const, Icon: TriangleAlert },
+        queued: { variant: 'muted' as const, Icon: CircleDashed },
+        running: { variant: 'warn' as const, Icon: LoaderCircle },
+        succeeded: { variant: 'ok' as const, Icon: CheckCircle2 },
+        failed: { variant: 'bad' as const, Icon: TriangleAlert },
     }[status];
 
     return (

@@ -9,7 +9,17 @@ import {
     RunStatusBadge,
     TargetStatusBadge,
 } from '@/components/creep/status-badges';
-import InputError from '@/components/input-error';
+import {
+    CheckField,
+    EmptyLine,
+    Field,
+    FormActions,
+    Page,
+    Panel,
+    PanelBar,
+    ReceiptRow,
+} from '@/components/ds';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -29,7 +39,6 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -86,11 +95,11 @@ export default function ShowCreepTarget({
         <>
             <Head title={target.display_name} />
 
-            <div className="space-y-6 px-4 py-6">
+            <Page>
                 <header className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <h1 className="text-xl font-semibold tracking-tight">
+                    <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <h1 className="display-dot text-2xl sm:text-3xl">
                                 {snapshot?.title ?? target.display_name}
                             </h1>
                             <TargetStatusBadge
@@ -102,7 +111,7 @@ export default function ShowCreepTarget({
                             href={target.url}
                             target="_blank"
                             rel="noreferrer noopener"
-                            className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                            className="inline-flex items-center gap-1.5 font-mono text-xs tracking-[0.04em] text-muted-foreground underline decoration-rule underline-offset-4 hover:text-ribbon hover:decoration-ribbon"
                         >
                             {hostOf(target.url)}
                             <ExternalLink aria-hidden className="size-3" />
@@ -113,7 +122,7 @@ export default function ShowCreepTarget({
                         {({ processing }) => (
                             <Button
                                 type="submit"
-                                variant="outline"
+                                variant="secondary"
                                 disabled={processing || isCreeping}
                             >
                                 <RefreshCw
@@ -129,36 +138,37 @@ export default function ShowCreepTarget({
                 </header>
 
                 {target.status === 'failed' && (
-                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm">
-                        <p className="font-medium text-destructive">
-                            Creeper has parked this target.
-                        </p>
-                        <p className="mt-0.5 text-muted-foreground">
-                            It failed {target.consecutive_failures} times in a
-                            row. Fix the URL or set it back to active below to
-                            try again.
-                        </p>
-                    </div>
+                    <Alert variant="destructive">
+                        <AlertTitle>Parked</AlertTitle>
+                        <AlertDescription>
+                            <p>
+                                Creeper failed {target.consecutive_failures}{' '}
+                                times in a row on this target. Fix the URL, or
+                                set it back to active below to try again.
+                            </p>
+                        </AlertDescription>
+                    </Alert>
                 )}
 
                 <div className="grid gap-6 lg:grid-cols-3">
-                    <ProductCard snapshot={snapshot} />
+                    <ProductPanel snapshot={snapshot} />
 
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle>Price history</CardTitle>
-                            <CardDescription>
-                                Every price Creeper has seen in the last 90
-                                days.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
+                    <Panel className="lg:col-span-2" lifted={false}>
+                        <PanelBar
+                            title="Price history"
+                            meta={
+                                snapshot
+                                    ? `as of ${formatRelative(snapshot.captured_at)}`
+                                    : undefined
+                            }
+                        />
+                        <div className="p-5">
                             <PriceHistoryChart
                                 snapshots={history.data}
                                 currency={snapshot?.currency ?? null}
                             />
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </Panel>
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
@@ -192,12 +202,16 @@ export default function ShowCreepTarget({
                     frequencies={frequencies}
                     statuses={statuses}
                 />
-            </div>
+            </Page>
         </>
     );
 }
 
-function ProductCard({ snapshot }: { snapshot: ProductSnapshot | null }) {
+/**
+ * What Creeper last read off the page, laid out as a receipt: the price large
+ * in dot-matrix, the details on dotted leaders under it.
+ */
+function ProductPanel({ snapshot }: { snapshot: ProductSnapshot | null }) {
     if (!snapshot) {
         return (
             <Card>
@@ -227,12 +241,12 @@ function ProductCard({ snapshot }: { snapshot: ProductSnapshot | null }) {
                     <img
                         src={snapshot.image_url}
                         alt=""
-                        className="aspect-video w-full rounded-lg border border-border object-cover"
+                        className="aspect-video w-full border border-rule object-cover"
                         loading="lazy"
                     />
                 )}
 
-                <p className="text-3xl font-semibold tabular-nums">
+                <p className="numeral-dot text-5xl">
                     {formatPrice(snapshot.price_amount, snapshot.currency)}
                 </p>
 
@@ -242,7 +256,7 @@ function ProductCard({ snapshot }: { snapshot: ProductSnapshot | null }) {
                         label={snapshot.availability_label}
                     />
                     {snapshot.rating !== null && (
-                        <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
                             <Star aria-hidden className="size-3.5" />
                             {snapshot.rating.toFixed(1)}
                             {snapshot.review_count !== null && (
@@ -252,22 +266,26 @@ function ProductCard({ snapshot }: { snapshot: ProductSnapshot | null }) {
                     )}
                 </div>
 
-                <dl className="space-y-1 text-sm">
-                    {snapshot.brand && (
-                        <div className="flex justify-between gap-4">
-                            <dt className="text-muted-foreground">Brand</dt>
-                            <dd className="truncate">{snapshot.brand}</dd>
-                        </div>
-                    )}
-                    {snapshot.sku && (
-                        <div className="flex justify-between gap-4">
-                            <dt className="text-muted-foreground">SKU</dt>
-                            <dd className="truncate font-mono text-xs">
-                                {snapshot.sku}
-                            </dd>
-                        </div>
-                    )}
-                </dl>
+                {(snapshot.brand || snapshot.sku) && (
+                    <dl className="space-y-2 border-t border-dashed border-rule pt-4 font-mono text-xs">
+                        {snapshot.brand && (
+                            <ReceiptRow
+                                labelAs="dt"
+                                valueAs="dd"
+                                label="Brand"
+                                value={snapshot.brand}
+                            />
+                        )}
+                        {snapshot.sku && (
+                            <ReceiptRow
+                                labelAs="dt"
+                                valueAs="dd"
+                                label="SKU"
+                                value={snapshot.sku}
+                            />
+                        )}
+                    </dl>
+                )}
             </CardContent>
         </Card>
     );
@@ -275,30 +293,26 @@ function ProductCard({ snapshot }: { snapshot: ProductSnapshot | null }) {
 
 function RunLog({ runs }: { runs: CreepRun[] }) {
     if (runs.length === 0) {
-        return (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-                No runs yet.
-            </p>
-        );
+        return <EmptyLine>No runs yet</EmptyLine>;
     }
 
     return (
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-rule">
             {runs.map((run) => (
-                <li key={run.id} className="py-3 first:pt-0 last:pb-0">
+                <li key={run.id} className="py-2.5 first:pt-0 last:pb-0">
                     <div className="flex items-center justify-between gap-3">
                         <RunStatusBadge
                             status={run.status}
                             label={run.status_label}
                         />
-                        <span className="text-xs text-muted-foreground">
+                        <span className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground tabular-nums">
                             {formatRelative(run.started_at)}
                             <span aria-hidden> · </span>
                             {formatDuration(run.duration_ms)}
                         </span>
                     </div>
                     {run.error && (
-                        <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+                        <p className="mt-1.5 line-clamp-2 font-mono text-[0.6875rem] text-ribbon-red">
                             {run.error}
                         </p>
                     )}
@@ -329,35 +343,43 @@ function SettingsCard({
                 <Form
                     {...CreepTargetController.update.form(target.id)}
                     options={{ preserveScroll: true }}
-                    className="max-w-xl space-y-6"
+                    className="max-w-xl space-y-5"
                 >
                     {({ processing, errors }) => (
                         <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="url">Product URL</Label>
+                            <Field
+                                label="Product URL"
+                                htmlFor="url"
+                                error={errors.url}
+                            >
                                 <Input
                                     id="url"
                                     name="url"
                                     type="url"
                                     required
+                                    className="font-mono text-sm"
                                     defaultValue={target.url}
                                 />
-                                <InputError message={errors.url} />
-                            </div>
+                            </Field>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
+                            <Field
+                                label="Name"
+                                htmlFor="name"
+                                error={errors.name}
+                            >
                                 <Input
                                     id="name"
                                     name="name"
                                     defaultValue={target.name ?? ''}
                                 />
-                                <InputError message={errors.name} />
-                            </div>
+                            </Field>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="frequency">Schedule</Label>
+                            <div className="grid gap-5 sm:grid-cols-2">
+                                <Field
+                                    label="Schedule"
+                                    htmlFor="frequency"
+                                    error={errors.frequency}
+                                >
                                     <Select
                                         name="frequency"
                                         defaultValue={target.frequency}
@@ -379,11 +401,13 @@ function SettingsCard({
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <InputError message={errors.frequency} />
-                                </div>
+                                </Field>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="status">Status</Label>
+                                <Field
+                                    label="Status"
+                                    htmlFor="status"
+                                    error={errors.status}
+                                >
                                     <Select
                                         name="status"
                                         defaultValue={
@@ -409,32 +433,29 @@ function SettingsCard({
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <InputError message={errors.status} />
-                                </div>
+                                </Field>
                             </div>
 
-                            <div className="flex items-start gap-3">
-                                <Checkbox
-                                    id="notify_on_change"
-                                    name="notify_on_change"
-                                    value="1"
-                                    defaultChecked={target.notify_on_change}
-                                />
-                                <Label
-                                    htmlFor="notify_on_change"
-                                    className="font-normal"
-                                >
-                                    Email me when something changes
-                                </Label>
-                            </div>
+                            <CheckField
+                                htmlFor="notify_on_change"
+                                label="Email me when something changes"
+                                control={
+                                    <Checkbox
+                                        id="notify_on_change"
+                                        name="notify_on_change"
+                                        value="1"
+                                        defaultChecked={target.notify_on_change}
+                                    />
+                                }
+                            />
 
-                            <div className="flex items-center justify-between gap-4 border-t border-border pt-6">
+                            <FormActions
+                                aside={<DeleteTarget target={target} />}
+                            >
                                 <Button type="submit" disabled={processing}>
                                     Save changes
                                 </Button>
-
-                                <DeleteTarget target={target} />
-                            </div>
+                            </FormActions>
                         </>
                     )}
                 </Form>
@@ -447,7 +468,7 @@ function DeleteTarget({ target }: { target: CreepTarget }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="ghost" className="text-destructive">
+                <Button variant="ghost" className="hover:text-ribbon-red">
                     Stop creeping
                 </Button>
             </DialogTrigger>

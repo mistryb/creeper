@@ -39,11 +39,19 @@ it('follows the config when the price changes', function () {
         ->assertInertia(fn ($page) => $page->where('pricing.amount', '$12.50'));
 });
 
-it('loads the landing page typefaces on the landing page only', function () {
-    $this->get(route('home'))->assertSee('Doto', escape: false);
+it('loads all three design system typefaces everywhere', function () {
+    // Mono and Doto stopped belonging to the landing page when they became
+    // part of the design system: the app sets labels in one and figures in the
+    // other, so both halves of the product must load the same faces.
+    $this->get(route('home'))
+        ->assertSee('Instrument Sans', escape: false)
+        ->assertSee('IBM Plex Mono', escape: false)
+        ->assertSee('Doto', escape: false);
 
     $this->actingAs(User::factory()->create())
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertDontSee('Doto', escape: false);
+        ->assertSee('Instrument Sans', escape: false)
+        ->assertSee('IBM Plex Mono', escape: false)
+        ->assertSee('Doto', escape: false);
 });

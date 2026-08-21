@@ -1,6 +1,22 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import AppLogoIcon from '@/components/app-logo-icon';
+import {
+    Changed,
+    Chip,
+    ChipRow,
+    Display,
+    Emitted,
+    Eyebrow,
+    Ok,
+    Panel,
+    PanelBar,
+    ReceiptRow,
+    SectionHeading,
+    Terminal,
+} from '@/components/ds';
+import { Button } from '@/components/ui/button';
 import { dashboard, login, register } from '@/routes';
 import { create } from '@/routes/creep-targets';
 
@@ -25,7 +41,7 @@ const OUTPUT_LINES: OutputLine[] = [
         node: (
             <>
                 {'  reading page '}
-                <span className="text-ribbon">................ ok</span>
+                <Ok>................ ok</Ok>
             </>
         ),
     },
@@ -35,7 +51,7 @@ const OUTPUT_LINES: OutputLine[] = [
         node: (
             <>
                 {'  asking claude '}
-                <span className="text-ribbon">............... ok</span>
+                <Ok>............... ok</Ok>
             </>
         ),
     },
@@ -44,13 +60,13 @@ const OUTPUT_LINES: OutputLine[] = [
         delay: 440,
         node: (
             <>
-                <span className="font-medium text-ribbon-amber">~ price</span>
+                <Changed>~ price</Changed>
                 {'        '}
-                <span className="font-medium text-ink">$289.00</span>
+                <Emitted>$289.00</Emitted>
                 {' → '}
-                <span className="font-medium text-ink">$219.00</span>
+                <Emitted>$219.00</Emitted>
                 {'   '}
-                <span className="font-medium text-ribbon-amber">down 24%</span>
+                <Changed>down 24%</Changed>
             </>
         ),
     },
@@ -59,12 +75,10 @@ const OUTPUT_LINES: OutputLine[] = [
         delay: 440,
         node: (
             <>
-                <span className="font-medium text-ribbon-amber">
-                    ~ availability
-                </span>{' '}
-                <span className="font-medium text-ink">out of stock</span>
+                <Changed>~ availability</Changed>{' '}
+                <Emitted>out of stock</Emitted>
                 {' → '}
-                <span className="font-medium text-ink">3 left</span>
+                <Emitted>3 left</Emitted>
             </>
         ),
     },
@@ -73,7 +87,7 @@ const OUTPUT_LINES: OutputLine[] = [
         delay: 0,
         node: (
             <>
-                <span className="text-ribbon">2 changes logged.</span>
+                <Ok>2 changes logged.</Ok>
                 {' next visit in 24h.'}
             </>
         ),
@@ -151,9 +165,7 @@ function SetupStep({
 }) {
     return (
         <li className="grid grid-cols-[3.25rem_1fr] gap-3 border-t border-rule px-3.5 py-5 first:border-t-0 odd:bg-greenbar sm:gap-7 sm:px-6 sm:py-6">
-            <span className="pt-0.5 font-mono text-[0.8125rem] font-semibold tracking-[0.08em] text-ribbon">
-                {step}
-            </span>
+            <span className="pt-0.5 label-mono text-ribbon">{step}</span>
             <div>
                 <h3 className="mb-1.5 font-mono text-[0.9375rem] font-semibold tracking-[0.14em] uppercase">
                     {heading}
@@ -161,33 +173,9 @@ function SetupStep({
                 <p className="max-w-[40rem] text-[0.9375rem] text-ink-soft">
                     {children}
                 </p>
-                <div className="mt-3.5 flex flex-wrap gap-1.5">{chips}</div>
+                <ChipRow className="mt-3.5">{chips}</ChipRow>
             </div>
         </li>
-    );
-}
-
-function Chip({ children, on = false }: { children: ReactNode; on?: boolean }) {
-    return (
-        <span
-            className={
-                on
-                    ? 'border border-ribbon bg-white px-2 py-1 font-mono text-[0.6875rem] tracking-[0.08em] whitespace-nowrap text-ribbon'
-                    : 'border border-rule bg-paper-lit px-2 py-1 font-mono text-[0.6875rem] tracking-[0.08em] whitespace-nowrap text-ink-soft'
-            }
-        >
-            {children}
-        </span>
-    );
-}
-
-function ReceiptRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="flex items-baseline gap-1.5 pt-3">
-            <span>{label}</span>
-            <span className="flex-1 -translate-y-1 border-b border-dotted border-rule" />
-            <span className="text-ink-soft">{value}</span>
-        </div>
     );
 }
 
@@ -220,26 +208,13 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                     <div className="mx-auto flex min-h-10 w-full max-w-5xl items-center justify-between gap-4 px-4 sm:px-10">
                         <Link
                             href="/"
-                            className="inline-flex items-center gap-2 font-mono text-[0.8125rem] font-semibold tracking-[0.22em] uppercase"
+                            className="inline-flex items-center gap-2 label-micro text-[0.8125rem] font-semibold tracking-[0.22em]"
                         >
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 16 16"
-                                aria-hidden="true"
-                                fill="currentColor"
-                            >
-                                <rect x="2" y="2" width="3" height="3" />
-                                <rect x="7" y="2" width="3" height="3" />
-                                <rect x="11" y="6" width="3" height="3" />
-                                <rect x="6" y="6" width="3" height="3" />
-                                <rect x="2" y="11" width="3" height="3" />
-                                <rect x="7" y="11" width="3" height="3" />
-                            </svg>
+                            <AppLogoIcon className="size-4" />
                             Creeper
                         </Link>
 
-                        <nav className="flex items-center gap-3 font-mono text-[0.6875rem] font-medium tracking-[0.16em] uppercase sm:gap-7">
+                        <nav className="flex items-center gap-3 label-micro sm:gap-7">
                             <a
                                 href="#setup"
                                 className="hidden text-paper-lit/70 transition-colors hover:text-paper-lit sm:inline"
@@ -252,56 +227,39 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                             >
                                 Price
                             </a>
-                            {auth.user ? (
-                                <Link
-                                    href={dashboard()}
-                                    className="bg-paper-lit px-3 py-1.5 text-ink transition-colors hover:bg-white"
-                                >
-                                    Dashboard
-                                </Link>
-                            ) : (
-                                <Link
-                                    href={login()}
-                                    className="bg-paper-lit px-3 py-1.5 text-ink transition-colors hover:bg-white"
-                                >
-                                    Log in
-                                </Link>
-                            )}
+                            <Link
+                                href={auth.user ? dashboard() : login()}
+                                className="bg-paper-lit px-3 py-1.5 text-ink transition-colors hover:bg-white"
+                            >
+                                {auth.user ? 'Dashboard' : 'Log in'}
+                            </Link>
                         </nav>
                     </div>
                 </header>
 
                 <main>
                     <section className="mx-auto w-full max-w-5xl px-4 pt-8 pb-10 sm:px-10 sm:pt-16 sm:pb-20">
-                        <div className="border border-ink bg-paper-lit shadow-[6px_6px_0_rgba(20,32,26,0.12)]">
-                            <div className="flex items-center gap-3 border-b border-ink bg-greenbar px-3.5 py-2 font-mono text-[0.6875rem] font-medium tracking-[0.16em] text-ribbon uppercase">
-                                <span
-                                    className="flex gap-1.5"
-                                    aria-hidden="true"
-                                >
-                                    <i className="size-2 rounded-full border border-ribbon bg-ribbon" />
-                                    <i className="size-2 rounded-full border border-ribbon" />
-                                    <i className="size-2 rounded-full border border-ribbon" />
-                                </span>
-                                <span>creeper</span>
-                                <span className="flex-1" />
-                                <span>watching 1 page</span>
-                            </div>
+                        <Panel>
+                            <PanelBar title="creeper" meta="watching 1 page" />
 
                             <div className="p-6 sm:p-12">
-                                <p className="mb-5 flex flex-wrap items-center gap-2.5 font-mono text-[0.6875rem] font-medium tracking-[0.16em] text-ribbon uppercase">
+                                <Eyebrow className="mb-5 flex flex-wrap items-center gap-2.5">
                                     <span>Page watcher</span>
                                     <span className="text-rule">/</span>
                                     <span>Bring your own API key</span>
-                                </p>
+                                </Eyebrow>
 
-                                <h1 className="mb-5 font-dot text-[clamp(2.6rem,9.5vw,5.5rem)] leading-[0.92] font-extrabold tracking-[0.01em] text-balance uppercase">
+                                <Display
+                                    as="h1"
+                                    size="hero"
+                                    className="mb-5 text-balance"
+                                >
                                     Put a page
                                     <br />
                                     <span className="text-ribbon">
                                         on watch.
                                     </span>
-                                </h1>
+                                </Display>
 
                                 <p className="mb-8 max-w-[40rem] text-[1.0625rem] text-ink-soft">
                                     You have tabs you keep reopening — a price
@@ -332,17 +290,15 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                                             className="min-w-0 flex-1 border-0 bg-transparent py-2.5 text-sm text-ink placeholder:text-ink-soft/65 focus:outline-none"
                                         />
                                     </label>
-                                    <button
-                                        type="submit"
-                                        className="cursor-pointer border border-ink bg-ribbon px-5 py-3 font-mono text-xs font-semibold tracking-[0.14em] text-white uppercase transition-colors hover:bg-ribbon-lit active:translate-y-px"
-                                    >
+                                    <Button type="submit" size="lg">
                                         Creep it
-                                    </button>
+                                    </Button>
                                 </form>
 
-                                <pre
+                                <Terminal
                                     aria-label="Example run"
-                                    className="mt-7 min-h-46 overflow-x-auto border-t border-dashed border-rule px-4 pt-4 font-mono text-[0.8125rem] leading-[1.9] text-ink-soft tabular-nums"
+                                    caret
+                                    className="mt-7 min-h-46"
                                 >
                                     {typed}
                                     {OUTPUT_LINES.slice(0, revealed).map(
@@ -353,27 +309,21 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                                             </span>
                                         ),
                                     )}
-                                    <span
-                                        aria-hidden="true"
-                                        className="caret ml-0.5 inline-block h-[1.05em] w-[0.55em] bg-ribbon [vertical-align:-0.2em]"
-                                    />
-                                </pre>
+                                </Terminal>
                             </div>
-                        </div>
+                        </Panel>
                     </section>
 
                     <section
                         id="setup"
                         className="mx-auto w-full max-w-5xl px-4 pb-12 sm:px-10 sm:pb-22"
                     >
-                        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-                            <h2 className="font-dot text-[clamp(1.4rem,4vw,2.1rem)] leading-tight font-bold tracking-[0.02em] uppercase">
-                                Set it up once
-                            </h2>
-                            <p className="font-mono text-[0.6875rem] font-medium tracking-[0.16em] text-ribbon uppercase">
-                                Three steps, then it is out of your hands
-                            </p>
-                        </div>
+                        <SectionHeading
+                            as="h2"
+                            className="mb-5"
+                            title="Set it up once"
+                            note="Three steps, then it is out of your hands"
+                        />
 
                         <ol className="border border-ink">
                             <SetupStep
@@ -429,13 +379,16 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                     <section id="price" className="bg-ink text-paper-lit">
                         <div className="mx-auto grid w-full max-w-5xl items-start gap-8 px-4 py-12 sm:px-10 sm:py-22 lg:grid-cols-[1fr_22rem] lg:gap-14">
                             <div>
-                                <p className="font-mono text-[0.6875rem] font-medium tracking-[0.16em] text-[#8fc4a8] uppercase">
+                                <Eyebrow tone="pale">
                                     Pricing, all of it
-                                </p>
+                                </Eyebrow>
 
-                                <h2 className="my-4 max-w-[16ch] font-dot text-[clamp(1.8rem,5vw,2.8rem)] leading-tight font-bold tracking-[0.02em] text-balance uppercase">
+                                <Display
+                                    size="lg"
+                                    className="my-4 max-w-[16ch] text-balance"
+                                >
                                     One plan. No tiers, no seats.
-                                </h2>
+                                </Display>
 
                                 <p className="max-w-[32rem] text-paper-lit/70">
                                     {pricing.amount} a month covers as many
@@ -458,7 +411,7 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                             </div>
 
                             <div className="drop-shadow-[0_10px_22px_rgba(0,0,0,0.45)]">
-                                <div className="receipt-paper bg-white px-6 py-9 font-mono text-[0.8125rem] text-ink tabular-nums">
+                                <div className="receipt-paper space-y-3 bg-white px-6 py-9 font-mono text-[0.8125rem] text-ink tabular-nums">
                                     <div className="border-b border-dashed border-rule pb-3.5 text-center">
                                         <strong className="block font-semibold tracking-[0.22em]">
                                             CREEPER
@@ -485,12 +438,12 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                                         value="yours"
                                     />
 
-                                    <div className="mt-4 flex items-end justify-between gap-3 border-t border-dashed border-rule pt-4">
-                                        <span className="font-mono text-[0.6875rem] font-medium tracking-[0.16em] text-ink-soft uppercase">
+                                    <div className="flex items-end justify-between gap-3 border-t border-dashed border-rule pt-4">
+                                        <span className="label-micro text-ink-soft">
                                             Total due
                                         </span>
                                         <span>
-                                            <span className="font-dot text-[2.9rem] leading-[0.85] font-extrabold tracking-[0.01em]">
+                                            <span className="numeral-dot text-[2.9rem]">
                                                 {pricing.amount}
                                             </span>{' '}
                                             <span className="text-[0.6875rem] tracking-[0.12em] text-ink-soft uppercase">
@@ -499,14 +452,17 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                                         </span>
                                     </div>
 
-                                    <Link
-                                        href={signUpHref}
-                                        className="mt-5 block cursor-pointer border border-ink bg-ribbon px-5 py-3 text-center font-mono text-xs font-semibold tracking-[0.14em] text-white uppercase transition-colors hover:bg-ribbon-lit"
+                                    <Button
+                                        asChild
+                                        size="lg"
+                                        className="w-full"
                                     >
-                                        Start creeping
-                                    </Link>
+                                        <Link href={signUpHref}>
+                                            Start creeping
+                                        </Link>
+                                    </Button>
 
-                                    <p className="mt-3.5 text-center text-[0.625rem] tracking-[0.1em] text-ink-soft uppercase">
+                                    <p className="text-center text-[0.625rem] tracking-[0.1em] text-ink-soft uppercase">
                                         Cancel any time · Usage billed monthly
                                     </p>
                                 </div>
@@ -516,7 +472,7 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                 </main>
 
                 <footer className="bg-ink text-paper-lit/55">
-                    <div className="mx-auto flex min-h-12 w-full max-w-5xl items-center justify-between gap-4 border-t border-paper-lit/20 px-4 font-mono text-[0.6875rem] font-medium tracking-[0.16em] uppercase sm:px-10">
+                    <div className="mx-auto flex min-h-12 w-full max-w-5xl items-center justify-between gap-4 border-t border-paper-lit/20 px-4 label-micro sm:px-10">
                         <span>Creeper · a small tool for keeping tabs</span>
                         <Link
                             href={login()}

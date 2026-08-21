@@ -5,7 +5,13 @@ import {
     AvailabilityBadge,
     RunStatusBadge,
 } from '@/components/creep/status-badges';
-import Heading from '@/components/heading';
+import {
+    EmptyLine,
+    EmptyState,
+    Page,
+    SectionHeading,
+    StatTile,
+} from '@/components/ds';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -46,36 +52,66 @@ export default function Dashboard({
         <>
             <Head title="Dashboard" />
 
-            <div className="space-y-6 px-4 py-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <Heading
-                        title="Dashboard"
-                        description="What Creeper has been up to."
-                    />
-
-                    <Button asChild>
-                        <Link href={create()}>
-                            <Plus aria-hidden />
-                            New target
-                        </Link>
-                    </Button>
-                </div>
+            <Page>
+                <SectionHeading
+                    title="Dashboard"
+                    note="What Creeper has been up to"
+                    actions={
+                        <Button asChild>
+                            <Link href={create()}>
+                                <Plus aria-hidden />
+                                New target
+                            </Link>
+                        </Button>
+                    }
+                />
 
                 {stats.targets === 0 ? (
-                    <EmptyState />
+                    <EmptyState
+                        icon={Bug}
+                        title="Nothing to creep"
+                        actions={
+                            <>
+                                <Button asChild>
+                                    <Link href={create()}>
+                                        <Plus aria-hidden />
+                                        Add your first target
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" asChild>
+                                    <Link href={index()}>View targets</Link>
+                                </Button>
+                            </>
+                        }
+                    >
+                        Point Creeper at a product page and it will track the
+                        price and the stock, and tell you when either moves.
+                    </EmptyState>
                 ) : (
                     <>
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <StatTile label="Targets" value={stats.targets} />
-                            <StatTile label="Active" value={stats.active} />
+                            <StatTile
+                                label="Targets"
+                                value={stats.targets.toLocaleString()}
+                            />
+                            <StatTile
+                                label="Active"
+                                value={stats.active.toLocaleString()}
+                                tone="ribbon"
+                            />
                             <StatTile
                                 label="Changes this week"
-                                value={stats.changesThisWeek}
+                                value={stats.changesThisWeek.toLocaleString()}
                             />
                             <StatTile
                                 label="Parked"
-                                value={stats.failing}
-                                tone={stats.failing > 0 ? 'warning' : 'default'}
+                                value={stats.failing.toLocaleString()}
+                                tone={stats.failing > 0 ? 'warn' : 'default'}
+                                note={
+                                    stats.failing > 0
+                                        ? 'needs a look'
+                                        : 'all clear'
+                                }
                             />
                         </div>
 
@@ -121,62 +157,33 @@ export default function Dashboard({
                         </Card>
                     </>
                 )}
-            </div>
+            </Page>
         </>
-    );
-}
-
-function StatTile({
-    label,
-    value,
-    tone = 'default',
-}: {
-    label: string;
-    value: number;
-    tone?: 'default' | 'warning';
-}) {
-    return (
-        <div className="rounded-xl border border-border p-4">
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p
-                className={
-                    tone === 'warning'
-                        ? 'mt-1 text-3xl font-semibold text-amber-600 tabular-nums dark:text-amber-400'
-                        : 'mt-1 text-3xl font-semibold tabular-nums'
-                }
-            >
-                {value.toLocaleString()}
-            </p>
-        </div>
     );
 }
 
 function Watchlist({ targets }: { targets: CreepTarget[] }) {
     if (targets.length === 0) {
-        return (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-                Nothing here yet.
-            </p>
-        );
+        return <EmptyLine>Nothing here yet</EmptyLine>;
     }
 
     return (
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-rule">
             {targets.map((target) => (
                 <li
                     key={target.id}
-                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                    className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
                 >
                     <div className="min-w-0">
                         <Link
                             href={show(target.id)}
-                            className="block truncate text-sm font-medium underline-offset-4 hover:underline"
+                            className="block truncate text-sm font-medium underline decoration-transparent underline-offset-4 hover:decoration-ribbon"
                             prefetch
                         >
                             {target.latest_snapshot?.title ??
                                 target.display_name}
                         </Link>
-                        <p className="truncate text-xs text-muted-foreground">
+                        <p className="truncate font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
                             {hostOf(target.url)}
                         </p>
                     </div>
@@ -192,7 +199,7 @@ function Watchlist({ targets }: { targets: CreepTarget[] }) {
                                 }
                             />
                         )}
-                        <span className="text-sm font-medium tabular-nums">
+                        <span className="font-mono text-sm font-medium tabular-nums">
                             {formatPrice(
                                 target.latest_snapshot?.price_amount,
                                 target.latest_snapshot?.currency,
@@ -207,19 +214,15 @@ function Watchlist({ targets }: { targets: CreepTarget[] }) {
 
 function RecentRuns({ runs }: { runs: CreepRun[] }) {
     if (runs.length === 0) {
-        return (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-                No runs yet.
-            </p>
-        );
+        return <EmptyLine>No runs yet</EmptyLine>;
     }
 
     return (
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-rule">
             {runs.map((run) => (
                 <li
                     key={run.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                    className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
                 >
                     <div className="flex min-w-0 items-center gap-3">
                         <RunStatusBadge
@@ -229,44 +232,18 @@ function RecentRuns({ runs }: { runs: CreepRun[] }) {
                         {run.target && (
                             <Link
                                 href={show(run.target.id)}
-                                className="truncate text-sm underline-offset-4 hover:underline"
+                                className="truncate text-sm underline decoration-transparent underline-offset-4 hover:decoration-ribbon"
                             >
                                 {run.target.display_name}
                             </Link>
                         )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
                         {formatRelative(run.started_at)}
                     </span>
                 </li>
             ))}
         </ul>
-    );
-}
-
-function EmptyState() {
-    return (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border px-6 py-16 text-center">
-            <Bug aria-hidden className="size-8 text-muted-foreground" />
-            <div className="space-y-1">
-                <p className="font-medium">Creeper has nothing to creep.</p>
-                <p className="max-w-sm text-sm text-muted-foreground">
-                    Point it at a product page and it will track the price and
-                    the stock, and tell you when either moves.
-                </p>
-            </div>
-            <div className="flex gap-2">
-                <Button asChild>
-                    <Link href={create()}>
-                        <Plus aria-hidden />
-                        Add your first target
-                    </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                    <Link href={index()}>View targets</Link>
-                </Button>
-            </div>
-        </div>
     );
 }
 

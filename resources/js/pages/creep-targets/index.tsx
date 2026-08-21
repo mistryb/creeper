@@ -4,8 +4,17 @@ import {
     AvailabilityBadge,
     TargetStatusBadge,
 } from '@/components/creep/status-badges';
-import Heading from '@/components/heading';
+import { EmptyState, Page, SectionHeading } from '@/components/ds';
 import { Button } from '@/components/ui/button';
+import {
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { formatPrice, formatRelative, hostOf } from '@/lib/format';
 import { create, index, show } from '@/routes/creep-targets';
 import type { CreepTarget, PaginatedCollection } from '@/types';
@@ -15,143 +24,131 @@ export default function CreepTargetsIndex({
 }: {
     targets: PaginatedCollection<CreepTarget>;
 }) {
+    const { current_page: page, last_page: lastPage, total } = targets.meta;
+
     return (
         <>
             <Head title="Creep targets" />
 
-            <div className="px-4 py-6">
-                <div className="mb-8 flex items-start justify-between gap-4">
-                    <Heading
-                        title="Creep targets"
-                        description="Everything Creeper is keeping an eye on."
-                    />
-
-                    <Button asChild>
-                        <Link href={create()}>
-                            <Plus aria-hidden />
-                            New target
-                        </Link>
-                    </Button>
-                </div>
+            <Page>
+                <SectionHeading
+                    title="Creep targets"
+                    note={
+                        total === 1
+                            ? '1 page on watch'
+                            : `${total.toLocaleString()} pages on watch`
+                    }
+                    actions={
+                        <Button asChild>
+                            <Link href={create()}>
+                                <Plus aria-hidden />
+                                New target
+                            </Link>
+                        </Button>
+                    }
+                />
 
                 {targets.data.length === 0 ? (
-                    <EmptyState />
+                    <EmptyState
+                        icon={Bug}
+                        title="Nothing is being crept"
+                        actions={
+                            <Button asChild>
+                                <Link href={create()}>
+                                    <Plus aria-hidden />
+                                    Add your first target
+                                </Link>
+                            </Button>
+                        }
+                    >
+                        Give Creeper a product URL and it will watch the price
+                        and the stock for you.
+                    </EmptyState>
                 ) : (
                     <>
-                        <div className="overflow-x-auto rounded-xl border border-border">
-                            <table className="w-full text-sm">
-                                <caption className="sr-only">
-                                    Creep targets
-                                </caption>
-                                <thead className="border-b border-border bg-muted/40 text-left">
-                                    <tr>
-                                        <th
-                                            scope="col"
-                                            className="px-4 py-3 font-medium"
-                                        >
-                                            Target
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className="px-4 py-3 font-medium"
-                                        >
-                                            Price
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className="px-4 py-3 font-medium"
-                                        >
-                                            Stock
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className="px-4 py-3 font-medium"
-                                        >
-                                            Status
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className="px-4 py-3 font-medium"
-                                        >
-                                            Last crept
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {targets.data.map((target) => (
-                                        <tr
-                                            key={target.id}
-                                            className="transition-colors hover:bg-muted/40"
-                                        >
-                                            <td className="px-4 py-3">
-                                                <Link
-                                                    href={show(target.id)}
-                                                    className="font-medium text-foreground underline-offset-4 hover:underline"
-                                                    prefetch
-                                                >
-                                                    {target.latest_snapshot
-                                                        ?.title ??
-                                                        target.display_name}
-                                                </Link>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {hostOf(target.url)}
-                                                    <span aria-hidden> · </span>
-                                                    {target.frequency_label.toLowerCase()}
-                                                </p>
-                                            </td>
-                                            <td className="px-4 py-3 font-medium tabular-nums">
-                                                {formatPrice(
-                                                    target.latest_snapshot
-                                                        ?.price_amount,
-                                                    target.latest_snapshot
-                                                        ?.currency,
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {target.latest_snapshot ? (
-                                                    <AvailabilityBadge
-                                                        availability={
-                                                            target
-                                                                .latest_snapshot
-                                                                .availability
-                                                        }
-                                                        label={
-                                                            target
-                                                                .latest_snapshot
-                                                                .availability_label
-                                                        }
-                                                    />
-                                                ) : (
-                                                    <span className="text-muted-foreground">
-                                                        —
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <TargetStatusBadge
-                                                    status={target.status}
-                                                    label={target.status_label}
+                        <Table>
+                            <TableCaption className="sr-only">
+                                Creep targets
+                            </TableCaption>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead scope="col">Target</TableHead>
+                                    <TableHead scope="col">Price</TableHead>
+                                    <TableHead scope="col">Stock</TableHead>
+                                    <TableHead scope="col">Status</TableHead>
+                                    <TableHead scope="col">
+                                        Last crept
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {targets.data.map((target) => (
+                                    <TableRow key={target.id}>
+                                        <TableCell>
+                                            <Link
+                                                href={show(target.id)}
+                                                className="font-medium underline decoration-transparent underline-offset-4 hover:decoration-ribbon"
+                                                prefetch
+                                            >
+                                                {target.latest_snapshot
+                                                    ?.title ??
+                                                    target.display_name}
+                                            </Link>
+                                            <p className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
+                                                {hostOf(target.url)}
+                                                <span aria-hidden> · </span>
+                                                {target.frequency_label.toLowerCase()}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell className="font-mono font-medium tabular-nums">
+                                            {formatPrice(
+                                                target.latest_snapshot
+                                                    ?.price_amount,
+                                                target.latest_snapshot
+                                                    ?.currency,
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {target.latest_snapshot ? (
+                                                <AvailabilityBadge
+                                                    availability={
+                                                        target.latest_snapshot
+                                                            .availability
+                                                    }
+                                                    label={
+                                                        target.latest_snapshot
+                                                            .availability_label
+                                                    }
                                                 />
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                {formatRelative(
-                                                    target.last_crept_at,
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    —
+                                                </span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <TargetStatusBadge
+                                                status={target.status}
+                                                label={target.status_label}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
+                                            {formatRelative(
+                                                target.last_crept_at,
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
 
-                        {targets.meta.last_page > 1 && (
+                        {lastPage > 1 && (
                             <nav
                                 aria-label="Pagination"
-                                className="mt-4 flex items-center justify-between text-sm"
+                                className="flex items-center justify-between gap-4"
                             >
-                                <p className="text-muted-foreground">
-                                    Page {targets.meta.current_page} of{' '}
-                                    {targets.meta.last_page}
+                                <p className="label-micro text-muted-foreground">
+                                    Page {page} of {lastPage}
                                 </p>
 
                                 <div className="flex gap-2">
@@ -184,29 +181,8 @@ export default function CreepTargetsIndex({
                         )}
                     </>
                 )}
-            </div>
+            </Page>
         </>
-    );
-}
-
-function EmptyState() {
-    return (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border px-6 py-16 text-center">
-            <Bug aria-hidden className="size-8 text-muted-foreground" />
-            <div className="space-y-1">
-                <p className="font-medium">Nothing is being crept yet.</p>
-                <p className="max-w-sm text-sm text-muted-foreground">
-                    Give Creeper a product URL and it will watch the price and
-                    the stock for you.
-                </p>
-            </div>
-            <Button asChild>
-                <Link href={create()}>
-                    <Plus aria-hidden />
-                    Add your first target
-                </Link>
-            </Button>
-        </div>
     );
 }
 

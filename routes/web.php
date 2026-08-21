@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 
+/*
+ * The living style guide: every token, type style and component in one place,
+ * so a new screen can be built by looking rather than by guessing. It documents
+ * the design system, so it is never part of the shipped product.
+ */
+if (! app()->isProduction()) {
+    Route::inertia('design', 'design')->name('design');
+}
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

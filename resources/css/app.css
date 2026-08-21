@@ -5,36 +5,95 @@
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * The Creeper design system: green-bar printer paper, ribbon ink.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Everything the landing page invented is a token here, and every shadcn
+ * semantic token is mapped onto those tokens — so a stock component picks up
+ * the house style without being touched. Three rules hold the look together:
+ *
+ *   1. Nothing is round. The radius scale is zeroed; only `rounded-full`
+ *      survives, for dots and avatars.
+ *   2. Shadows are hard offsets, never blurs. Paper stacks, it does not float.
+ *   3. Anything a machine printed — labels, counts, prices, statuses — is set
+ *      in mono. Anything a person wrote is set in sans.
+ *
+ * The palette is a fixed set of light values. There is no dark theme: paper is
+ * paper, and the identity does not survive being inverted.
+ */
 
 @theme {
+    /* ── Type ────────────────────────────────────────────────────────────── */
+
     --font-sans:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
-    /*
-     * The marketing site's own palette: green-bar printer paper, ribbon ink.
-     * These are fixed values, not theme tokens — the landing page is light
-     * only by design and must not follow the app's appearance setting.
-     */
-    --font-dot: 'Doto', 'IBM Plex Mono', ui-monospace, monospace;
     --font-mono:
         'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+    /* Display only: a dot-matrix face, for headlines and headline numbers. */
+    --font-dot: 'Doto', 'IBM Plex Mono', ui-monospace, monospace;
+
+    /* ── Palette ─────────────────────────────────────────────────────────── */
 
     --color-paper: #f5f4ec;
     --color-paper-lit: #fbfaf4;
     --color-greenbar: #e2ebdc;
-    --color-ink: #14201a;
-    --color-ink-soft: #5d6b62;
-    --color-rule: #c9cdc0;
-    --color-ribbon: #1c6547;
-    --color-ribbon-lit: #2b8a60;
-    --color-ribbon-amber: #a75c07;
 
-    --radius-lg: var(--radius);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-sm: calc(var(--radius) - 4px);
+    --color-ink: #14201a;
+    /* A lift of ink, for a hover state on an ink surface. */
+    --color-ink-lift: #1e2e26;
+    /* A hairline on an ink surface, where --color-rule would glare. */
+    --color-ink-line: #2c3d34;
+    --color-ink-soft: #5d6b62;
+
+    --color-rule: #c9cdc0;
+
+    /*
+     * The ribbon: green for the ordinary, amber for attention, red for damage
+     * — a two-tone typewriter ribbon with one colour added. Every value below
+     * clears 4.5:1 on paper, greenbar, and paper-lit, so any of them can carry
+     * a word and not just decorate one.
+     */
+    --color-ribbon: #1c6547;
+    --color-ribbon-lit: #24784f;
+    /* Ribbon green legible on ink, for accents in the sidebar and footer. */
+    --color-ribbon-pale: #8fc4a8;
+    --color-ribbon-amber: #8f4e05;
+    --color-ribbon-red: #a1332a;
+    --color-ribbon-red-lit: #b93d31;
+
+    /* ── Radius: none ────────────────────────────────────────────────────── */
+
+    --radius: 0px;
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+    --radius-2xl: 0px;
+    --radius-3xl: 0px;
+    --radius-4xl: 0px;
+
+    /* ── Shadow: hard offsets ────────────────────────────────────────────── */
+
+    --shadow-2xs: 1px 1px 0 rgb(20 32 26 / 0.08);
+    --shadow-xs: 1px 1px 0 rgb(20 32 26 / 0.1);
+    --shadow-sm: 2px 2px 0 rgb(20 32 26 / 0.1);
+    --shadow-md: 3px 3px 0 rgb(20 32 26 / 0.12);
+    --shadow-lg: 4px 4px 0 rgb(20 32 26 / 0.12);
+    --shadow-xl: 6px 6px 0 rgb(20 32 26 / 0.12);
+    --shadow-2xl: 10px 10px 0 rgb(20 32 26 / 0.14);
+
+    /* The framed-panel offset, named so a page asks for it by intent. */
+    --shadow-stamp: 6px 6px 0 rgb(20 32 26 / 0.12);
+    --shadow-stamp-sm: 3px 3px 0 rgb(20 32 26 / 0.12);
+
+    /* ── shadcn semantic tokens, mapped onto the palette ─────────────────── */
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -81,80 +140,59 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    /* The price line. Light mode's chart-1 already clears 3:1 on white. */
-    --creep-chart-line: oklch(0.646 0.222 41.116);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
-}
+    /* Paper is the ground; a raised surface is paper caught in better light. */
+    --background: var(--color-paper);
+    --foreground: var(--color-ink);
+    --card: var(--color-paper-lit);
+    --card-foreground: var(--color-ink);
+    --popover: var(--color-paper-lit);
+    --popover-foreground: var(--color-ink);
 
-.dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    /* Dark mode is a chosen step, not a flip: the shipped chart-1 only
-       reaches 2.9:1 on this surface, so the price line is lifted to 3.5:1
-       while staying inside the 0.48-0.67 lightness band. */
-    --creep-chart-line: oklch(0.64 0.19 264.376);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    /* Primary is the ribbon. Secondary is a green bar. */
+    --primary: var(--color-ribbon);
+    --primary-foreground: #ffffff;
+    --secondary: var(--color-greenbar);
+    --secondary-foreground: var(--color-ink);
+    --muted: var(--color-greenbar);
+    --muted-foreground: var(--color-ink-soft);
+    --accent: var(--color-greenbar);
+    --accent-foreground: var(--color-ink);
+    --destructive: var(--color-ribbon-red);
+    --destructive-foreground: #ffffff;
+
+    /*
+     * A border is a printed hairline; an input is a keyed field and gets the
+     * full ink outline, the way the landing page's command line does.
+     */
+    --border: var(--color-rule);
+    --input: var(--color-ink);
+    --ring: var(--color-ribbon);
+
+    /*
+     * Chart series in ribbon order, each ≥3:1 on paper so a line reads on its
+     * own. Series past the first three are rare; keep an axis to one meaning.
+     */
+    --chart-1: var(--color-ribbon);
+    --chart-2: var(--color-ribbon-amber);
+    --chart-3: var(--color-ribbon-red);
+    --chart-4: var(--color-ink-soft);
+    --chart-5: #4a7f9b;
+
+    /* The price line, named so the chart asks for a meaning, not a number. */
+    --creep-chart-line: var(--color-ribbon);
+
+    /*
+     * The sidebar is the ink slab from the landing page's header and footer,
+     * carried into the app so the two halves of the product share a spine.
+     */
+    --sidebar: var(--color-ink);
+    --sidebar-foreground: #e6e8de;
+    --sidebar-primary: var(--color-ribbon-pale);
+    --sidebar-primary-foreground: var(--color-ink);
+    --sidebar-accent: var(--color-ink-lift);
+    --sidebar-accent-foreground: var(--color-paper-lit);
+    --sidebar-border: var(--color-ink-line);
+    --sidebar-ring: var(--color-ribbon-pale);
 }
 
 @layer base {
@@ -165,6 +203,53 @@
     body {
         @apply bg-background text-foreground;
     }
+}
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Type recipes
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Four styles carry the whole voice. They are utilities rather than components
+ * so they can sit on whichever element the markup already needed, and so the
+ * letter-spacing and size never get re-guessed one screen at a time.
+ */
+
+/* The overline: a machine-printed field name. Sparingly, and never in prose. */
+@utility label-micro {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.45;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+/* A heavier stamp for a column head or a step number. */
+@utility label-mono {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+/* Headlines. Size stays with the caller — this only fixes the face. */
+@utility display-dot {
+    font-family: var(--font-dot);
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    line-height: 0.92;
+    text-transform: uppercase;
+}
+
+/* A number worth reading across a room: counts, totals, prices. */
+@utility numeral-dot {
+    font-family: var(--font-dot);
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
 }
 
 @keyframes caret-blink {
@@ -201,7 +286,7 @@
                 no-repeat;
     }
 
-    /* The block cursor trailing the hero's example run. */
+    /* The block cursor trailing a terminal line. */
     .caret {
         animation: caret-blink 1.1s steps(1) infinite;
     }
