@@ -13,6 +13,7 @@ import {
     CheckField,
     Chip,
     ChipRow,
+    CopyBlock,
     Display,
     Emitted,
     EmptyLine,
@@ -860,6 +861,23 @@ export default function DesignSystem() {
                                 </Terminal>
                             </div>
                         </Panel>
+                        <CopyBlock
+                            title="deploy prompt"
+                            meta="leaves in one piece"
+                            action="Copy the prompt"
+                            text={
+                                'Deploy Creeper on Laravel Cloud for me.\n\n1. Clone the repository and cd into it.\n2. composer global require laravel/cloud-cli\n3. cloud auth -n'
+                            }
+                        />
+
+                        <p className="max-w-prose text-sm text-ink-soft">
+                            <code className="font-mono">CopyBlock</code> is the{' '}
+                            <code className="font-mono">Terminal</code> plus a
+                            copy button, for text whose whole job is to leave in
+                            one piece — a prompt, a command. The button reports
+                            back in place rather than raising a toast.
+                        </p>
+
                         <p className="max-w-prose text-sm text-ink-soft">
                             <code className="font-mono">Terminal</code> is a{' '}
                             <code className="font-mono">&lt;pre&gt;</code>, so

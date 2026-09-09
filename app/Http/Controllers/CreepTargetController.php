@@ -13,6 +13,8 @@ use App\Http\Resources\CreepTargetResource;
 use App\Http\Resources\ProductSnapshotResource;
 use App\Jobs\RunCreep;
 use App\Models\CreepTarget;
+use App\Models\ProductSnapshot;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -35,7 +37,7 @@ class CreepTargetController extends Controller
 
         $targets = $request->user()
             ->creepTargets()
-            ->with(['latestSnapshot', 'latestRun'])
+            ->with(['latestSnapshot', 'latestChangelogSnapshot', 'latestRun'])
             ->latest()
             ->paginate(20)
             ->withQueryString();
@@ -53,6 +55,7 @@ class CreepTargetController extends Controller
         $this->authorize('create', CreepTarget::class);
 
         return Inertia::render('creep-targets/create', [
+            'types' => $this->typeOptions(),
             'frequencies' => $this->frequencyOptions(),
         ]);
     }
@@ -66,7 +69,7 @@ class CreepTargetController extends Controller
 
         $target = $request->user()->creepTargets()->create([
             ...$request->safe()->only(['url', 'name', 'frequency', 'notify_on_change']),
-            'type' => CreepType::Product,
+            'type' => $request->safe()->enum('type', CreepType::class),
             'status' => TargetStatus::Active,
         ]);
 
@@ -89,25 +92,16 @@ class CreepTargetController extends Controller
     {
         $this->authorize('view', $creepTarget);
 
-        $creepTarget->load(['latestSnapshot', 'latestRun']);
-
-        $history = $creepTarget->snapshots()
-            ->where('captured_at', '>=', Carbon::now()->subDays(self::HISTORY_DAYS))
-            ->orderBy('captured_at')
-            ->get();
+        $creepTarget->load(['latestSnapshot', 'latestChangelogSnapshot', 'latestRun']);
 
         return Inertia::render('creep-targets/show', [
             'target' => CreepTargetResource::make($creepTarget),
-            'history' => ProductSnapshotResource::collection($history),
+            'history' => ProductSnapshotResource::collection($this->priceHistory($creepTarget)),
             'runs' => CreepRunResource::collection(
                 $creepTarget->runs()->orderByDesc('started_at')->orderByDesc('id')->limit(20)->get()
             ),
             'changes' => CreepChangeResource::collection($creepTarget->changes()->latest('detected_at')->limit(30)->get()),
             'frequencies' => $this->frequencyOptions(),
-            'statuses' => array_map(
-                fn (TargetStatus $status): array => ['value' => $status->value, 'label' => $status->label()],
-                [TargetStatus::Active, TargetStatus::Paused],
-            ),
             'isCreeping' => $creepTarget->runs()->whereIn('status', ['queued', 'running'])->exists(),
         ]);
     }
@@ -152,6 +146,40 @@ class CreepTargetController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Target deleted.')]);
 
         return to_route('creep-targets.index');
+    }
+
+    /**
+     * The price chart's series. Only product targets have one.
+     *
+     * @return Collection<int, ProductSnapshot>
+     */
+    private function priceHistory(CreepTarget $target): Collection
+    {
+        if ($target->type !== CreepType::Product) {
+            return new Collection;
+        }
+
+        return $target->snapshots()
+            ->where('captured_at', '>=', Carbon::now()->subDays(self::HISTORY_DAYS))
+            ->orderBy('captured_at')
+            ->get();
+    }
+
+    /**
+     * The kinds of creeping on offer. How each one is pitched is the form's
+     * business — see `resources/js/lib/creep-types.ts`.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function typeOptions(): array
+    {
+        return array_map(
+            fn (CreepType $type): array => [
+                'value' => $type->value,
+                'label' => $type->label(),
+            ],
+            CreepType::cases(),
+        );
     }
 
     /**

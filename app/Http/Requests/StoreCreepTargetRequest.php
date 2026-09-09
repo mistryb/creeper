@@ -3,8 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Concerns\CreepTargetValidationRules;
+use App\Enums\CreepType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCreepTargetRequest extends FormRequest
 {
@@ -17,7 +19,12 @@ class StoreCreepTargetRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->creepTargetRules($this->user()->id);
+        return [
+            // The one setting a target cannot change later: its readings are
+            // filed in a table per type, so switching would strand them.
+            'type' => ['required', Rule::enum(CreepType::class)],
+            ...$this->creepTargetRules($this->user()->id),
+        ];
     }
 
     /**

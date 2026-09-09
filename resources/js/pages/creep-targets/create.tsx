@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import CreepTargetController from '@/actions/App/Http/Controllers/CreepTargetController';
 import {
     CheckField,
@@ -17,14 +18,22 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { creepTypeCopy } from '@/lib/creep-types';
 import { create, index } from '@/routes/creep-targets';
-import type { SelectOption } from '@/types';
+import type { CreepType, CreepTypeOption, SelectOption } from '@/types';
 
 export default function CreateCreepTarget({
+    types,
     frequencies,
 }: {
+    types: CreepTypeOption[];
     frequencies: SelectOption[];
 }) {
+    // The type decides what the rest of the form is asking for, so the page
+    // holds it even though everything else on the form is uncontrolled.
+    const [type, setType] = useState<CreepType>(types[0]?.value ?? 'product');
+    const copy = creepTypeCopy(type);
+
     return (
         <>
             <Head title="New creep target" />
@@ -32,7 +41,7 @@ export default function CreateCreepTarget({
             <Page>
                 <SectionHeading
                     title="New target"
-                    note="Paste a product URL — Creeper takes it from there"
+                    note="Paste a URL — Creeper takes it from there"
                 />
 
                 <div className="max-w-xl space-y-6">
@@ -43,10 +52,42 @@ export default function CreateCreepTarget({
                         {({ processing, errors }) => (
                             <>
                                 <Field
-                                    label="Product URL"
+                                    label="What should Creeper watch?"
+                                    htmlFor="type"
+                                    error={errors.type}
+                                    hint={copy.pitch}
+                                >
+                                    <Select
+                                        name="type"
+                                        value={type}
+                                        onValueChange={(value) =>
+                                            setType(value as CreepType)
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            id="type"
+                                            className="w-full"
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {types.map((option) => (
+                                                <SelectItem
+                                                    key={option.value}
+                                                    value={option.value}
+                                                >
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+
+                                <Field
+                                    label={copy.urlLabel}
                                     htmlFor="url"
                                     error={errors.url}
-                                    hint="The page for a single product, not a search or category listing."
+                                    hint={copy.urlHint}
                                 >
                                     <Input
                                         id="url"
@@ -55,7 +96,7 @@ export default function CreateCreepTarget({
                                         required
                                         autoFocus
                                         className="font-mono text-sm"
-                                        placeholder="https://example.com/products/kettle"
+                                        placeholder={copy.urlPlaceholder}
                                     />
                                 </Field>
 
@@ -108,7 +149,7 @@ export default function CreateCreepTarget({
                                 <CheckField
                                     htmlFor="notify_on_change"
                                     label="Email me when something changes"
-                                    hint="Price moves and stock flips only — not review counts."
+                                    hint={copy.changeHint}
                                     control={
                                         <Checkbox
                                             id="notify_on_change"

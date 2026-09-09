@@ -1,10 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
 import { Bug, Plus } from 'lucide-react';
 import { ChangeList } from '@/components/creep/change-list';
-import {
-    AvailabilityBadge,
-    RunStatusBadge,
-} from '@/components/creep/status-badges';
+import { LatestReading } from '@/components/creep/latest-reading';
+import { RunStatusBadge } from '@/components/creep/status-badges';
 import {
     EmptyLine,
     EmptyState,
@@ -20,7 +18,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { formatPrice, formatRelative, hostOf } from '@/lib/format';
+import { formatRelative, hostOf } from '@/lib/format';
 import { dashboard } from '@/routes';
 import { create, index, show } from '@/routes/creep-targets';
 import type {
@@ -181,6 +179,7 @@ function Watchlist({ targets }: { targets: CreepTarget[] }) {
                             prefetch
                         >
                             {target.latest_snapshot?.title ??
+                                target.latest_changelog_snapshot?.product ??
                                 target.display_name}
                         </Link>
                         <p className="truncate font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
@@ -189,22 +188,7 @@ function Watchlist({ targets }: { targets: CreepTarget[] }) {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-3">
-                        {target.latest_snapshot && (
-                            <AvailabilityBadge
-                                availability={
-                                    target.latest_snapshot.availability
-                                }
-                                label={
-                                    target.latest_snapshot.availability_label
-                                }
-                            />
-                        )}
-                        <span className="font-mono text-sm font-medium tabular-nums">
-                            {formatPrice(
-                                target.latest_snapshot?.price_amount,
-                                target.latest_snapshot?.currency,
-                            )}
-                        </span>
+                        <LatestReading target={target} />
                     </div>
                 </li>
             ))}

@@ -1,5 +1,7 @@
 <?php
 
+use App\Creeping\CreepManager;
+use App\Creeping\Drivers\FakeCreepDriver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,3 +45,20 @@ expect()->extend('toBeOne', function () {
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
+
+/**
+ * Make the fake creep driver the one every run will use, and hand it back so a
+ * test can say what it should answer.
+ *
+ * The manager caches its drivers, so the instance primed here is the same one
+ * the job resolves.
+ */
+function fakeDriver(): FakeCreepDriver
+{
+    config(['creeping.driver' => 'fake']);
+
+    /** @var FakeCreepDriver $driver */
+    $driver = app(CreepManager::class)->driver('fake');
+
+    return $driver;
+}

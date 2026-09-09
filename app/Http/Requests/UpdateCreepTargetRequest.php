@@ -25,7 +25,7 @@ class UpdateCreepTargetRequest extends FormRequest
 
         return [
             ...$this->creepTargetRules($this->user()->id, $target->id),
-            'status' => ['required', Rule::enum(TargetStatus::class)],
+            'status' => ['sometimes', Rule::enum(TargetStatus::class)],
         ];
     }
 

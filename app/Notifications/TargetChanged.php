@@ -11,8 +11,12 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Tells the owner that something moved on a target they're watching.
+ *
+ * One e-mail per run, whatever kind of target it is: a price that dropped and
+ * a release that shipped are both news, and both arrive as a list of
+ * {@see CreepChange} lines.
  */
-class ProductChanged extends Notification implements ShouldQueue
+class TargetChanged extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -49,12 +53,13 @@ class ProductChanged extends Notification implements ShouldQueue
     }
 
     /**
-     * Lead with the price when there is one — it's what people actually care about.
+     * Lead with the change people actually care about: a price move on a shop
+     * page, a shipped release on a changelog.
      */
     protected function subject(): string
     {
         foreach ($this->changes as $change) {
-            if ($change->field === 'price') {
+            if (in_array($change->field, ['price', 'release'], true)) {
                 return sprintf('%s: %s', $this->target->displayName(), $change->describe());
             }
         }

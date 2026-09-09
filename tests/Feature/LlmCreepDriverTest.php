@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Agents\ChangelogPageAgent;
 use App\Ai\Agents\ProductPageAgent;
 use App\Creeping\Contracts\CreepDriver;
 use App\Creeping\CreepManager;
@@ -513,4 +514,120 @@ it('records a failed run when the model finds nothing on the page', function () 
     expect($run->status)->toBe(RunStatus::Failed)
         ->and($run->error)->toContain('at least a title or a price')
         ->and($target->snapshots()->count())->toBe(0);
+});
+
+/**
+ * A changelog page of the kind a well-behaved product publishes.
+ */
+function changelogPage(): string
+{
+    return <<<'HTML'
+        <html><head><title>Widgets — Changelog</title></head><body>
+            <nav>Docs</nav>
+            <main>
+                <article>
+                    <header><h2>v2.4.0</h2><time datetime="2026-03-14">14 March 2026</time></header>
+                    <ul><li>Bulk export for reports</li><li>Webhook retries</li></ul>
+                </article>
+                <article>
+                    <header><h2>v2.3.0</h2></header>
+                    <ul><li>Faster search</li></ul>
+                </article>
+            </main>
+        </body></html>
+        HTML;
+}
+
+/**
+ * What the model would say about that page.
+ *
+ * @return array<string, mixed>
+ */
+function readChangelog(): array
+{
+    return [
+        'product' => 'Widgets',
+        'latest_version' => 'v2.4.0',
+        'releases' => [
+            [
+                'version' => 'v2.4.0',
+                'released_on' => '2026-03-14',
+                'title' => null,
+                'summary' => null,
+                'features' => [
+                    ['title' => 'Bulk export for reports', 'description' => null, 'kind' => 'feature'],
+                    ['title' => 'Webhook retries', 'description' => null, 'kind' => 'improvement'],
+                ],
+            ],
+        ],
+        'confidence' => 'high',
+        'notes' => null,
+    ];
+}
+
+/**
+ * A run against a changelog target, ready to creep.
+ */
+function changelogRun(): CreepRun
+{
+    $target = CreepTarget::factory()->changelog()->create(['url' => 'https://widgets.test/changelog']);
+
+    return CreepRun::factory()->running()->create(['creep_target_id' => $target->id])->fresh();
+}
+
+it('reads a changelog target with the changelog agent', function () {
+    Http::fake(['widgets.test/*' => Http::response(changelogPage(), 200, ['Content-Type' => 'text/html'])]);
+    ProductPageAgent::fake([extracted()]);
+    ChangelogPageAgent::fake([readChangelog()]);
+
+    $result = llmDriver()->creep(changelogRun());
+
+    expect($result->outcome)->toBe(CreepOutcome::Succeeded)
+        ->and($result->payload['latest_version'])->toBe('v2.4.0')
+        ->and($result->payload['releases'][0]['features'][0]['title'])->toBe('Bulk export for reports')
+        ->and($result->payload['source_url'])->toBe('https://widgets.test/changelog');
+
+    ProductPageAgent::assertNeverPrompted();
+});
+
+it('shows the changelog agent the versions and dates, and none of the furniture', function () {
+    Http::fake(['widgets.test/*' => Http::response(changelogPage(), 200, ['Content-Type' => 'text/html'])]);
+    ChangelogPageAgent::fake([readChangelog()]);
+
+    llmDriver()->creep(changelogRun());
+
+    ChangelogPageAgent::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('v2.4.0')
+        && $prompt->contains('14 March 2026')
+        && $prompt->contains('Webhook retries')
+        && ! $prompt->contains('Docs')
+        && ! $prompt->contains('<article'));
+});
+
+it('turns a whole changelog run into a snapshot', function () {
+    Http::fake(['widgets.test/*' => Http::response(changelogPage(), 200, ['Content-Type' => 'text/html'])]);
+    ChangelogPageAgent::fake([readChangelog()]);
+
+    $target = CreepTarget::factory()->changelog()->create(['url' => 'https://widgets.test/changelog']);
+
+    RunCreep::dispatchSync($target);
+
+    $snapshot = $target->changelogSnapshots()->sole();
+
+    expect($target->runs()->sole()->status)->toBe(RunStatus::Succeeded)
+        ->and($snapshot->product)->toBe('Widgets')
+        ->and($snapshot->latest_version)->toBe('v2.4.0')
+        ->and($snapshot->feature_count)->toBe(2)
+        ->and($snapshot->extra['confidence'])->toBe('high');
+});
+
+it('tells a changelog watcher what a thin page means for them', function () {
+    Http::fake(['widgets.test/*' => Http::response('<html><body><nav>Log in</nav></body></html>', 200, ['Content-Type' => 'text/html'])]);
+    ChangelogPageAgent::fake([readChangelog()]);
+
+    $result = llmDriver()->creep(changelogRun());
+
+    expect($result->outcome)->toBe(CreepOutcome::Failed)
+        ->and($result->error)->toContain('Release notes');
+
+    ChangelogPageAgent::assertNeverPrompted();
 });

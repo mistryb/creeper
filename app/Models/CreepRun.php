@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read CreepTarget $target
  * @property-read ProductSnapshot|null $snapshot
+ * @property-read ChangelogSnapshot|null $changelogSnapshot
  */
 #[Fillable(['creep_target_id', 'status', 'driver', 'started_at', 'finished_at', 'duration_ms', 'error', 'raw_payload'])]
 class CreepRun extends Model
@@ -54,10 +55,24 @@ class CreepRun extends Model
         return $this->belongsTo(CreepTarget::class, 'creep_target_id');
     }
 
-    /** @return HasOne<ProductSnapshot, $this> */
+    /**
+     * The reading a product creep produced.
+     *
+     * @return HasOne<ProductSnapshot, $this>
+     */
     public function snapshot(): HasOne
     {
         return $this->hasOne(ProductSnapshot::class);
+    }
+
+    /**
+     * The reading a changelog creep produced.
+     *
+     * @return HasOne<ChangelogSnapshot, $this>
+     */
+    public function changelogSnapshot(): HasOne
+    {
+        return $this->hasOne(ChangelogSnapshot::class);
     }
 
     /**

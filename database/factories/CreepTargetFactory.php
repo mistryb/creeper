@@ -37,6 +37,17 @@ class CreepTargetFactory extends Factory
         ];
     }
 
+    /**
+     * A target pointed at a changelog rather than a shop page.
+     */
+    public function changelog(): static
+    {
+        return $this->state(fn (): array => [
+            'type' => CreepType::Changelog,
+            'url' => 'https://'.fake()->unique()->domainName().'/changelog',
+        ]);
+    }
+
     public function paused(): static
     {
         return $this->state(fn (): array => [

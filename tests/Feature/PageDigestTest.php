@@ -1,5 +1,6 @@
 <?php
 
+use App\Creeping\Fetching\DigestProfile;
 use App\Creeping\Fetching\PageDigest;
 
 it('prefers a JSON-LD product block, and keeps it first', function () {
@@ -178,4 +179,56 @@ it('fingerprints the same page the same way, and a changed one differently', fun
 
     expect($page('£24.99')->fingerprint())->toBe($page('£24.99')->fingerprint())
         ->and($page('£24.99')->fingerprint())->not->toBe($page('£19.99')->fingerprint());
+});
+
+/**
+ * A release entry laid out the way most changelogs are: the version and the
+ * date in the entry's own `header`.
+ */
+function changelogHtml(): string
+{
+    return <<<'HTML'
+        <html><head>
+            <title>Widgets — Changelog</title>
+            <meta property="og:description" content="Everything we have shipped.">
+            <script type="application/ld+json">{"@type":"Product","name":"Widgets"}</script>
+        </head><body>
+            <nav>Docs · Pricing</nav>
+            <main>
+                <article>
+                    <header><h2>v2.4.0</h2><time datetime="2026-03-14">14 March 2026</time></header>
+                    <ul><li>Bulk export for reports</li></ul>
+                </article>
+            </main>
+            <footer>© Widgets</footer>
+        </body></html>
+        HTML;
+}
+
+it('keeps the release headings that a product digest throws away', function () {
+    $product = PageDigest::fromHtml(changelogHtml(), 12000)->toPrompt('https://widgets.test/changelog');
+    $changelog = PageDigest::fromHtml(changelogHtml(), 12000, DigestProfile::changelog())
+        ->toPrompt('https://widgets.test/changelog');
+
+    // A shop page keeps nothing in a `header`, so the version goes with it.
+    expect($product)->not->toContain('v2.4.0')
+        ->and($changelog)->toContain('v2.4.0')
+        ->and($changelog)->toContain('14 March 2026')
+        ->and($changelog)->toContain('Bulk export for reports');
+});
+
+it('still throws away the furniture around a changelog', function () {
+    $prompt = PageDigest::fromHtml(changelogHtml(), 12000, DigestProfile::changelog())
+        ->toPrompt('https://widgets.test/changelog');
+
+    expect($prompt)->not->toContain('Docs · Pricing')
+        ->and($prompt)->not->toContain('© Widgets');
+});
+
+it('spends nothing on schema.org data for a changelog', function () {
+    $digest = PageDigest::fromHtml(changelogHtml(), 12000, DigestProfile::changelog());
+
+    expect($digest->structuredData)->toBe([])
+        // The metadata worth having survives.
+        ->and($digest->meta['og:description'])->toBe('Everything we have shipped.');
 });

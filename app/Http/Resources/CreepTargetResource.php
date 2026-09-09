@@ -22,6 +22,7 @@ class CreepTargetResource extends JsonResource
             'name' => $this->name,
             'display_name' => $this->displayName(),
             'type' => $this->type->value,
+            'type_label' => $this->type->label(),
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'frequency' => $this->frequency->value,
@@ -31,7 +32,9 @@ class CreepTargetResource extends JsonResource
             'last_crept_at' => $this->last_crept_at?->toIso8601String(),
             'next_creep_at' => $this->next_creep_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
+            // One of these per type, and only the loaded one is ever sent.
             'latest_snapshot' => ProductSnapshotResource::make($this->whenLoaded('latestSnapshot')),
+            'latest_changelog_snapshot' => ChangelogSnapshotResource::make($this->whenLoaded('latestChangelogSnapshot')),
             'latest_run' => CreepRunResource::make($this->whenLoaded('latestRun')),
         ];
     }

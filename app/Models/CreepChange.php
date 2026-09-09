@@ -58,6 +58,7 @@ class CreepChange extends Model
     public function describe(): string
     {
         return match ($this->field) {
+            'release' => sprintf('Shipped %s', $this->new_value ?? 'a new release'),
             'price' => sprintf('Price %s from %s to %s', $this->direction->value === 'down' ? 'dropped' : 'rose', $this->old_value ?? 'unknown', $this->new_value ?? 'unknown'),
             'availability' => sprintf('Availability changed from %s to %s', $this->old_value ?? 'unknown', $this->new_value ?? 'unknown'),
             default => sprintf('%s changed from %s to %s', ucfirst(str_replace('_', ' ', $this->field)), $this->old_value ?? 'unknown', $this->new_value ?? 'unknown'),

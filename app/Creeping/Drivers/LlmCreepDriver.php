@@ -2,8 +2,8 @@
 
 namespace App\Creeping\Drivers;
 
-use App\Ai\Agents\ProductPageAgent;
 use App\Creeping\Contracts\CreepDriver;
+use App\Creeping\Contracts\CreepInstructions;
 use App\Creeping\Data\CreepResult;
 use App\Creeping\Data\ProductPayload;
 use App\Creeping\Exceptions\PageFetchFailed;
@@ -25,6 +25,10 @@ use RuntimeException;
  * worth paying for, and ask a model what it says. No browser, so a shop that
  * assembles its price in JavaScript will come back thin — that is the trade
  * for a driver that needs nothing but an API key.
+ *
+ * Which model is asked what, and how much of the page it is shown, comes from
+ * the target's {@see CreepInstructions}. This driver only knows about pages,
+ * keys and clocks.
  *
  * The whole thing is bounded by a wall-clock budget, because a synchronous run
  * that outlives its queue reservation would be picked up and crept a second
@@ -55,6 +59,8 @@ final class LlmCreepDriver implements CreepDriver
         $started = microtime(true);
         $deadline = $started + (float) ($this->config['budget'] ?? 70);
 
+        $instructions = $run->target->type->instructions();
+
         try {
             $page = $this->fetcher->fetch($run->target->url);
         } catch (PageFetchFailed $exception) {
@@ -69,14 +75,12 @@ final class LlmCreepDriver implements CreepDriver
 
         $fetchMs = (int) round((microtime(true) - $started) * 1000);
 
-        $digest = PageDigest::fromHtml($page->html, (int) ($this->config['max_characters'] ?? 12000));
+        $digest = $instructions->digest($page->html, (int) ($this->config['max_characters'] ?? 12000));
 
         // Nothing readable came back. Saying so is cheaper and more useful
         // than paying a model to tell us the same thing.
         if ($digest->isThin()) {
-            return CreepResult::failed(
-                "There was nothing readable at [{$page->url}]. Pages that build themselves in the browser are invisible to this driver."
-            );
+            return CreepResult::failed($instructions->unreadable($page->url));
         }
 
         [$instance, $provider, $model] = $this->provider($run->target->user);
@@ -93,7 +97,7 @@ final class LlmCreepDriver implements CreepDriver
         $prompt = $digest->toPrompt($page->url);
 
         try {
-            $response = (new ProductPageAgent)->prompt(
+            $response = $instructions->agent()->prompt(
                 $prompt,
                 provider: $instance,
                 model: $model,
@@ -112,7 +116,10 @@ final class LlmCreepDriver implements CreepDriver
         }
 
         if (! $response instanceof StructuredAgentResponse) {
-            throw new RuntimeException('The product page agent did not return structured output.');
+            throw new RuntimeException(sprintf(
+                'The %s agent did not return structured output.',
+                $run->target->type->value,
+            ));
         }
 
         return CreepResult::succeeded($this->payload(

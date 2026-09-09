@@ -36,8 +36,10 @@ use Illuminate\Support\Carbon;
  * @property-read User $user
  * @property-read Collection<int, CreepRun> $runs
  * @property-read Collection<int, ProductSnapshot> $snapshots
+ * @property-read Collection<int, ChangelogSnapshot> $changelogSnapshots
  * @property-read Collection<int, CreepChange> $changes
  * @property-read ProductSnapshot|null $latestSnapshot
+ * @property-read ChangelogSnapshot|null $latestChangelogSnapshot
  * @property-read CreepRun|null $latestRun
  */
 #[Fillable(['type', 'url', 'name', 'status', 'frequency', 'notify_on_change', 'settings'])]
@@ -81,10 +83,25 @@ class CreepTarget extends Model
         return $this->hasMany(CreepRun::class);
     }
 
-    /** @return HasMany<ProductSnapshot, $this> */
+    /**
+     * Readings from a product creep. Empty for every other type — snapshots
+     * are the one part of the pipeline each {@see CreepType} keeps its own.
+     *
+     * @return HasMany<ProductSnapshot, $this>
+     */
     public function snapshots(): HasMany
     {
         return $this->hasMany(ProductSnapshot::class);
+    }
+
+    /**
+     * Readings from a changelog creep.
+     *
+     * @return HasMany<ChangelogSnapshot, $this>
+     */
+    public function changelogSnapshots(): HasMany
+    {
+        return $this->hasMany(ChangelogSnapshot::class);
     }
 
     /** @return HasMany<CreepChange, $this> */
@@ -97,6 +114,12 @@ class CreepTarget extends Model
     public function latestSnapshot(): HasOne
     {
         return $this->hasOne(ProductSnapshot::class)->latestOfMany('captured_at');
+    }
+
+    /** @return HasOne<ChangelogSnapshot, $this> */
+    public function latestChangelogSnapshot(): HasOne
+    {
+        return $this->hasOne(ChangelogSnapshot::class)->latestOfMany('captured_at');
     }
 
     /** @return HasOne<CreepRun, $this> */
@@ -139,6 +162,36 @@ class CreepTarget extends Model
             'next_creep_at' => $this->status === TargetStatus::Active
                 ? $this->frequency->nextRunAfter($moment)
                 : null,
+        ])->save();
+    }
+
+    /**
+     * Stop creeping this target, keeping everything already found.
+     *
+     * Clearing `next_creep_at` is what actually stops the sweep: {@see scopeDue}
+     * matches on it, so a paused target becomes invisible to the scheduler
+     * rather than being fetched and thrown away.
+     */
+    public function pause(): void
+    {
+        $this->forceFill([
+            'status' => TargetStatus::Paused,
+            'next_creep_at' => null,
+        ])->save();
+    }
+
+    /**
+     * Start creeping again, on whatever schedule the target already has.
+     *
+     * This is also how a parked target is revived, so the failure streak is
+     * cleared here — otherwise the next single failure would park it again.
+     */
+    public function resume(): void
+    {
+        $this->forceFill([
+            'status' => TargetStatus::Active,
+            'consecutive_failures' => 0,
+            'next_creep_at' => $this->frequency->nextRunAfter($this->last_crept_at ?? Carbon::now()),
         ])->save();
     }
 }

@@ -1,28 +1,12 @@
 <?php
 
-use App\Creeping\CreepManager;
-use App\Creeping\Drivers\FakeCreepDriver;
 use App\Enums\Availability;
 use App\Enums\RunStatus;
 use App\Enums\TargetStatus;
 use App\Jobs\RunCreep;
 use App\Models\CreepTarget;
-use App\Notifications\ProductChanged;
+use App\Notifications\TargetChanged;
 use Illuminate\Support\Facades\Notification;
-
-/**
- * The manager caches its drivers, so the instance we prime here is the same
- * one the job resolves.
- */
-function fakeDriver(): FakeCreepDriver
-{
-    config(['creeping.driver' => 'fake']);
-
-    /** @var FakeCreepDriver $driver */
-    $driver = app(CreepManager::class)->driver('fake');
-
-    return $driver;
-}
 
 it('records a run and a snapshot', function () {
     $target = CreepTarget::factory()->create();
@@ -83,7 +67,7 @@ it('records a change when the price moves', function () {
         ->and($change->direction->value)->toBe('down')
         ->and($target->snapshots()->count())->toBe(2);
 
-    Notification::assertSentTo($target->user, ProductChanged::class);
+    Notification::assertSentTo($target->user, TargetChanged::class);
 });
 
 it('records nothing when nothing moved', function () {

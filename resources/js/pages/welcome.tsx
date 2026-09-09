@@ -1,7 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import AppLogoIcon from '@/components/app-logo-icon';
 import {
     Changed,
     Chip,
@@ -16,7 +15,9 @@ import {
     Terminal,
 } from '@/components/ds';
 import { Button } from '@/components/ui/button';
-import { dashboard, login } from '@/routes';
+import MarketingLayout, { MarketingNavLink } from '@/layouts/marketing-layout';
+import { REPOSITORY_URL } from '@/lib/links';
+import { deploy, login } from '@/routes';
 import { create } from '@/routes/creep-targets';
 
 /**
@@ -178,6 +179,31 @@ function SetupStep({
     );
 }
 
+/**
+ * One of the ways to run Creeper yourself: a numbered card on the ink slab,
+ * carrying its own button. The children are the sentence and the button, in
+ * that order, so an option reads as prose with a key at the bottom.
+ */
+function RunOption({
+    step,
+    heading,
+    children,
+}: {
+    step: string;
+    heading: string;
+    children: ReactNode;
+}) {
+    return (
+        <li className="border border-paper-lit/20 px-6 py-7">
+            <p className="label-micro text-paper-lit/55">Option {step}</p>
+            <h3 className="mt-2.5 mb-2 font-mono text-[0.9375rem] font-semibold tracking-[0.14em] uppercase">
+                {heading}
+            </h3>
+            <div className="text-paper-lit/70">{children}</div>
+        </li>
+    );
+}
+
 export default function Welcome() {
     const { auth } = usePage().props;
     const { typed, revealed } = useExampleRun();
@@ -194,241 +220,219 @@ export default function Welcome() {
         <>
             <Head title="Put a page on watch" />
 
-            <div className="min-h-screen bg-paper font-sans text-ink">
-                <header className="bg-ink text-paper-lit">
-                    <div className="mx-auto flex min-h-10 w-full max-w-5xl items-center justify-between gap-4 px-4 sm:px-10">
-                        <Link
-                            href="/"
-                            className="inline-flex items-center gap-2 label-micro text-[0.8125rem] font-semibold tracking-[0.22em]"
-                        >
-                            <AppLogoIcon className="size-4" />
-                            Creeper
-                        </Link>
+            <MarketingLayout
+                nav={
+                    <>
+                        <MarketingNavLink href="#setup">
+                            How it works
+                        </MarketingNavLink>
+                        <MarketingNavLink href="#start">
+                            Ways to run
+                        </MarketingNavLink>
+                    </>
+                }
+            >
+                <section className="mx-auto w-full max-w-5xl px-4 pt-8 pb-10 sm:px-10 sm:pt-16 sm:pb-20">
+                    <Panel>
+                        <PanelBar title="creeper" meta="watching 1 page" />
 
-                        <nav className="flex items-center gap-3 label-micro sm:gap-7">
-                            <a
-                                href="#setup"
-                                className="hidden text-paper-lit/70 transition-colors hover:text-paper-lit sm:inline"
+                        <div className="p-6 sm:p-12">
+                            <Eyebrow className="mb-5 flex flex-wrap items-center gap-2.5">
+                                <span>Page watcher</span>
+                                <span className="text-rule">/</span>
+                                <span>Bring your own API key</span>
+                            </Eyebrow>
+
+                            <Display
+                                as="h1"
+                                size="hero"
+                                className="mb-5 text-balance"
                             >
-                                How it works
-                            </a>
-                            <a
-                                href="#start"
-                                className="hidden text-paper-lit/70 transition-colors hover:text-paper-lit sm:inline"
+                                Put a page
+                                <br />
+                                <span className="text-ribbon">on watch.</span>
+                            </Display>
+
+                            <p className="mb-8 max-w-[40rem] text-[1.0625rem] text-ink-soft">
+                                You have tabs you keep reopening — a price you
+                                are waiting on, a listing that might come back,
+                                a page that changes when nobody is looking.{' '}
+                                <strong className="font-medium text-ink">
+                                    Creeper reads them for you
+                                </strong>{' '}
+                                and speaks up the moment something moves.
+                            </p>
+
+                            <form
+                                onSubmit={startWatching}
+                                className="flex max-w-[34rem] flex-wrap gap-2"
                             >
-                                Get started
-                            </a>
-                            <Link
-                                href={auth.user ? dashboard() : login()}
-                                className="bg-paper-lit px-3 py-1.5 text-ink transition-colors hover:bg-white"
-                            >
-                                {auth.user ? 'Dashboard' : 'Log in'}
-                            </Link>
-                        </nav>
-                    </div>
-                </header>
-
-                <main>
-                    <section className="mx-auto w-full max-w-5xl px-4 pt-8 pb-10 sm:px-10 sm:pt-16 sm:pb-20">
-                        <Panel>
-                            <PanelBar title="creeper" meta="watching 1 page" />
-
-                            <div className="p-6 sm:p-12">
-                                <Eyebrow className="mb-5 flex flex-wrap items-center gap-2.5">
-                                    <span>Page watcher</span>
-                                    <span className="text-rule">/</span>
-                                    <span>Bring your own API key</span>
-                                </Eyebrow>
-
-                                <Display
-                                    as="h1"
-                                    size="hero"
-                                    className="mb-5 text-balance"
-                                >
-                                    Put a page
-                                    <br />
-                                    <span className="text-ribbon">
-                                        on watch.
+                                <label className="flex flex-1 basis-60 items-center gap-2 border border-ink bg-white px-3 font-mono focus-within:shadow-[inset_0_0_0_1px_var(--color-ink)]">
+                                    <span
+                                        aria-hidden="true"
+                                        className="text-ribbon"
+                                    >
+                                        &gt;
                                     </span>
-                                </Display>
+                                    <input
+                                        type="url"
+                                        aria-label="Page to watch"
+                                        placeholder="paste a link to watch"
+                                        className="min-w-0 flex-1 border-0 bg-transparent py-2.5 text-sm text-ink placeholder:text-ink-soft/65 focus:outline-none"
+                                    />
+                                </label>
+                                <Button type="submit" size="lg">
+                                    Creep it
+                                </Button>
+                            </form>
 
-                                <p className="mb-8 max-w-[40rem] text-[1.0625rem] text-ink-soft">
-                                    You have tabs you keep reopening — a price
-                                    you are waiting on, a listing that might
-                                    come back, a page that changes when nobody
-                                    is looking.{' '}
-                                    <strong className="font-medium text-ink">
-                                        Creeper reads them for you
-                                    </strong>{' '}
-                                    and speaks up the moment something moves.
-                                </p>
-
-                                <form
-                                    onSubmit={startWatching}
-                                    className="flex max-w-[34rem] flex-wrap gap-2"
-                                >
-                                    <label className="flex flex-1 basis-60 items-center gap-2 border border-ink bg-white px-3 font-mono focus-within:shadow-[inset_0_0_0_1px_var(--color-ink)]">
-                                        <span
-                                            aria-hidden="true"
-                                            className="text-ribbon"
-                                        >
-                                            &gt;
-                                        </span>
-                                        <input
-                                            type="url"
-                                            aria-label="Page to watch"
-                                            placeholder="paste a link to watch"
-                                            className="min-w-0 flex-1 border-0 bg-transparent py-2.5 text-sm text-ink placeholder:text-ink-soft/65 focus:outline-none"
-                                        />
-                                    </label>
-                                    <Button type="submit" size="lg">
-                                        Creep it
-                                    </Button>
-                                </form>
-
-                                <Terminal
-                                    aria-label="Example run"
-                                    caret
-                                    className="mt-7 min-h-46"
-                                >
-                                    {typed}
-                                    {OUTPUT_LINES.slice(0, revealed).map(
-                                        (line) => (
-                                            <span key={line.key}>
-                                                {'\n'}
-                                                {line.node}
-                                            </span>
-                                        ),
-                                    )}
-                                </Terminal>
-                            </div>
-                        </Panel>
-                    </section>
-
-                    <section
-                        id="setup"
-                        className="mx-auto w-full max-w-5xl px-4 pb-12 sm:px-10 sm:pb-22"
-                    >
-                        <SectionHeading
-                            as="h2"
-                            className="mb-5"
-                            title="Set it up once"
-                            note="Three steps, then it is out of your hands"
-                        />
-
-                        <ol className="border border-ink">
-                            <SetupStep
-                                step="01"
-                                heading="Point it at a page"
-                                chips={
-                                    <Chip>shop.example.com/tents/mesa-2p</Chip>
-                                }
+                            <Terminal
+                                aria-label="Example run"
+                                caret
+                                className="mt-7 min-h-46"
                             >
-                                Any URL that renders in a browser. A product
-                                page, a marketplace listing, a release page —
-                                Creeper does not need an API on the other end.
-                            </SetupStep>
+                                {typed}
+                                {OUTPUT_LINES.slice(0, revealed).map((line) => (
+                                    <span key={line.key}>
+                                        {'\n'}
+                                        {line.node}
+                                    </span>
+                                ))}
+                            </Terminal>
+                        </div>
+                    </Panel>
+                </section>
 
-                            <SetupStep
-                                step="02"
-                                heading="Say what you care about"
-                                chips={
-                                    <>
-                                        <Chip on>price</Chip>
-                                        <Chip on>availability</Chip>
-                                        <Chip on>title</Chip>
-                                        <Chip>+ anything you name</Chip>
-                                    </>
-                                }
+                <section
+                    id="setup"
+                    className="mx-auto w-full max-w-5xl px-4 pb-12 sm:px-10 sm:pb-22"
+                >
+                    <SectionHeading
+                        as="h2"
+                        className="mb-5"
+                        title="Set it up once"
+                        note="Three steps, then it is out of your hands"
+                    />
+
+                    <ol className="border border-ink">
+                        <SetupStep
+                            step="01"
+                            heading="Point it at a page"
+                            chips={<Chip>shop.example.com/tents/mesa-2p</Chip>}
+                        >
+                            Any URL that renders in a browser. A product page, a
+                            marketplace listing, a release page — Creeper does
+                            not need an API on the other end.
+                        </SetupStep>
+
+                        <SetupStep
+                            step="02"
+                            heading="Say what you care about"
+                            chips={
+                                <>
+                                    <Chip on>price</Chip>
+                                    <Chip on>availability</Chip>
+                                    <Chip on>title</Chip>
+                                    <Chip>+ anything you name</Chip>
+                                </>
+                            }
+                        >
+                            Describe it in plain words. Creeper turns that into
+                            fields it can pull on every visit, so you get a tidy
+                            number back instead of a wall of page.
+                        </SetupStep>
+
+                        <SetupStep
+                            step="03"
+                            heading="Then quit checking"
+                            chips={
+                                <>
+                                    <Chip>every hour</Chip>
+                                    <Chip on>every day</Chip>
+                                    <Chip>every week</Chip>
+                                    <Chip>only when I ask</Chip>
+                                </>
+                            }
+                        >
+                            Pick a rhythm and walk away. Creeper keeps the
+                            history, draws the line, and only interrupts you
+                            when a value actually changed. Each visit counts as
+                            one check.
+                        </SetupStep>
+                    </ol>
+                </section>
+
+                <section id="start" className="bg-ink text-paper-lit">
+                    <div className="mx-auto grid w-full max-w-5xl items-start gap-8 px-4 py-12 sm:px-10 sm:py-22 lg:grid-cols-[1fr_22rem] lg:gap-14">
+                        <div>
+                            <Eyebrow tone="pale">Two ways to run it</Eyebrow>
+
+                            <Display
+                                size="lg"
+                                className="my-4 max-w-[16ch] text-balance"
                             >
-                                Describe it in plain words. Creeper turns that
-                                into fields it can pull on every visit, so you
-                                get a tidy number back instead of a wall of
-                                page.
-                            </SetupStep>
+                                One install. No tiers, no seats.
+                            </Display>
 
-                            <SetupStep
-                                step="03"
-                                heading="Then quit checking"
-                                chips={
-                                    <>
-                                        <Chip>every hour</Chip>
-                                        <Chip on>every day</Chip>
-                                        <Chip>every week</Chip>
-                                        <Chip>only when I ask</Chip>
-                                    </>
-                                }
-                            >
-                                Pick a rhythm and walk away. Creeper keeps the
-                                history, draws the line, and only interrupts you
-                                when a value actually changed. Each visit counts
-                                as one check.
-                            </SetupStep>
-                        </ol>
-                    </section>
+                            <p className="max-w-[32rem] text-paper-lit/70">
+                                Creeper is an install of your own — a box you
+                                keep, or a Laravel Cloud account — watching as
+                                many pages as you like, as often as you like.
+                                Nothing is metered and nothing is capped.
+                            </p>
+                            <p className="mt-3.5 max-w-[32rem] text-paper-lit/70">
+                                The thinking runs on{' '}
+                                <strong className="font-medium text-paper-lit">
+                                    your own API key
+                                </strong>{' '}
+                                — Claude, or whichever model you like. You paste
+                                it in once, you pay the model directly, and you
+                                can see exactly what each run cost you.
+                            </p>
+                        </div>
 
-                    <section id="start" className="bg-ink text-paper-lit">
-                        <div className="mx-auto grid w-full max-w-5xl items-start gap-8 px-4 py-12 sm:px-10 sm:py-22 lg:grid-cols-[1fr_22rem] lg:gap-14">
-                            <div>
-                                <Eyebrow tone="pale">Yours to run</Eyebrow>
-
-                                <Display
+                        <ol className="grid gap-4">
+                            <RunOption step="01" heading="Read the source">
+                                Every part of Creeper is in one repository — the
+                                drivers, the schedule, the schema. Clone it,
+                                look it over, run it locally.
+                                <Button
+                                    asChild
                                     size="lg"
-                                    className="my-4 max-w-[16ch] text-balance"
+                                    variant="secondary"
+                                    className="mt-5 w-full"
                                 >
-                                    One install. No tiers, no seats.
-                                </Display>
+                                    <a
+                                        href={REPOSITORY_URL}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        View the repository
+                                    </a>
+                                </Button>
+                            </RunOption>
 
-                                <p className="max-w-[32rem] text-paper-lit/70">
-                                    Creeper runs on your own box, watching as
-                                    many pages as you like, as often as you
-                                    like. Nothing is metered and nothing is
-                                    capped.
-                                </p>
-                                <p className="mt-3.5 max-w-[32rem] text-paper-lit/70">
-                                    The thinking runs on{' '}
-                                    <strong className="font-medium text-paper-lit">
-                                        your own API key
-                                    </strong>{' '}
-                                    — Claude, or whichever model you like. You
-                                    paste it in once, you pay the model
-                                    directly, and you can see exactly what each
-                                    run cost you.
-                                </p>
-                            </div>
-
-                            <div className="border border-paper-lit/20 px-6 py-9">
-                                <p className="label-micro text-paper-lit/55">
-                                    Ready when you are
-                                </p>
-
-                                <p className="mt-3.5 mb-6 text-paper-lit/70">
-                                    Point Creeper at a product page and it takes
-                                    the first look straight away.
-                                </p>
-
-                                <Button asChild size="lg" className="w-full">
-                                    <Link href={signUpHref}>
-                                        Start creeping
+                            <RunOption
+                                step="02"
+                                heading="Put it on Laravel Cloud"
+                            >
+                                Would rather not keep a box alive? Copy the
+                                prompt, hand it to your agent, and it clones the
+                                repository and deploys your own copy.
+                                <Button
+                                    asChild
+                                    size="lg"
+                                    className="mt-5 w-full"
+                                >
+                                    <Link href={deploy()}>
+                                        Deploy on Laravel Cloud
                                     </Link>
                                 </Button>
-                            </div>
-                        </div>
-                    </section>
-                </main>
-
-                <footer className="bg-ink text-paper-lit/55">
-                    <div className="mx-auto flex min-h-12 w-full max-w-5xl items-center justify-between gap-4 border-t border-paper-lit/20 px-4 label-micro sm:px-10">
-                        <span>Creeper · a small tool for keeping tabs</span>
-                        <Link
-                            href={login()}
-                            className="transition-colors hover:text-paper-lit"
-                        >
-                            Log in
-                        </Link>
+                            </RunOption>
+                        </ol>
                     </div>
-                </footer>
-            </div>
+                </section>
+            </MarketingLayout>
         </>
     );
 }

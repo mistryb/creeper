@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\CreepFrequency;
+use App\Enums\CreepType;
 use App\Enums\TargetStatus;
 use App\Jobs\RunCreep;
 use App\Models\CreepTarget;
@@ -31,6 +32,7 @@ it('creates a target and starts creeping it immediately', function () {
 
     $this->actingAs($user)
         ->post(route('creep-targets.store'), [
+            'type' => CreepType::Product->value,
             'url' => 'https://example.com/products/kettle',
             'name' => 'Kettle',
             'frequency' => CreepFrequency::Daily->value,
@@ -55,6 +57,7 @@ it('rejects a URL that is already being crept by this user', function () {
 
     $this->actingAs($user)
         ->post(route('creep-targets.store'), [
+            'type' => CreepType::Product->value,
             'url' => 'https://example.com/products/kettle',
             'frequency' => CreepFrequency::Daily->value,
         ])
@@ -71,6 +74,7 @@ it('lets two users creep the same URL', function () {
 
     $this->actingAs($user)
         ->post(route('creep-targets.store'), [
+            'type' => CreepType::Product->value,
             'url' => $url,
             'frequency' => CreepFrequency::Daily->value,
         ])
@@ -194,10 +198,69 @@ it('defaults a new target to no notifications when the box is unticked', functio
 
     $this->actingAs($user)
         ->post(route('creep-targets.store'), [
+            'type' => CreepType::Product->value,
             'url' => 'https://example.com/products/quiet',
             'frequency' => 'daily',
         ])
         ->assertSessionHasNoErrors();
 
     expect($user->creepTargets()->sole()->notify_on_change)->toBeFalse();
+});
+
+it('lets the user pick what kind of creeping to do', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('creep-targets.store'), [
+            'type' => CreepType::Changelog->value,
+            'url' => 'https://example.com/changelog',
+            'frequency' => CreepFrequency::Daily->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($user->creepTargets()->sole()->type)->toBe(CreepType::Changelog);
+});
+
+it('offers every kind of creeping on the new-target form', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('creep-targets.create'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('creep-targets/create')
+            ->has('types', count(CreepType::cases()))
+            ->where('types.0.value', CreepType::Product->value)
+        );
+});
+
+it('refuses a kind of creeping it does not do', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('creep-targets.store'), [
+            'type' => 'weather',
+            'url' => 'https://example.com/forecast',
+            'frequency' => CreepFrequency::Daily->value,
+        ])
+        ->assertSessionHasErrors('type');
+
+    expect($user->creepTargets()->count())->toBe(0);
+});
+
+it('will not let a target change what kind of creeping it is', function () {
+    $user = User::factory()->create();
+    $target = CreepTarget::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->put(route('creep-targets.update', $target), [
+            'type' => CreepType::Changelog->value,
+            'url' => $target->url,
+            'frequency' => $target->frequency->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    // Readings are filed in a table per type, so a target that switched would
+    // strand everything already found.
+    expect($target->fresh()->type)->toBe(CreepType::Product);
 });

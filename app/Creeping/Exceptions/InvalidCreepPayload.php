@@ -5,7 +5,7 @@ namespace App\Creeping\Exceptions;
 use RuntimeException;
 
 /**
- * Thrown when a driver or callback hands back data that isn't a usable product.
+ * Thrown when a driver or callback hands back data we cannot file as a reading.
  */
 class InvalidCreepPayload extends RuntimeException
 {

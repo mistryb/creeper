@@ -1,9 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
 import { Bug, Plus } from 'lucide-react';
-import {
-    AvailabilityBadge,
-    TargetStatusBadge,
-} from '@/components/creep/status-badges';
+import { LatestReading } from '@/components/creep/latest-reading';
+import { PauseButton } from '@/components/creep/pause-button';
+import { TargetStatusBadge } from '@/components/creep/status-badges';
 import { EmptyState, Page, SectionHeading } from '@/components/ds';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +14,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { formatPrice, formatRelative, hostOf } from '@/lib/format';
+import { formatRelative, hostOf } from '@/lib/format';
 import { create, index, show } from '@/routes/creep-targets';
 import type { CreepTarget, PaginatedCollection } from '@/types';
 
@@ -61,8 +60,8 @@ export default function CreepTargetsIndex({
                             </Button>
                         }
                     >
-                        Give Creeper a product URL and it will watch the price
-                        and the stock for you.
+                        Point Creeper at a product page or a changelog, and it
+                        will watch it for you.
                     </EmptyState>
                 ) : (
                     <>
@@ -73,11 +72,15 @@ export default function CreepTargetsIndex({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead scope="col">Target</TableHead>
-                                    <TableHead scope="col">Price</TableHead>
-                                    <TableHead scope="col">Stock</TableHead>
+                                    <TableHead scope="col">Latest</TableHead>
                                     <TableHead scope="col">Status</TableHead>
                                     <TableHead scope="col">
                                         Last crept
+                                    </TableHead>
+                                    <TableHead scope="col">
+                                        <span className="sr-only">
+                                            Pause or resume
+                                        </span>
                                     </TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -92,39 +95,21 @@ export default function CreepTargetsIndex({
                                             >
                                                 {target.latest_snapshot
                                                     ?.title ??
+                                                    target
+                                                        .latest_changelog_snapshot
+                                                        ?.product ??
                                                     target.display_name}
                                             </Link>
                                             <p className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
                                                 {hostOf(target.url)}
                                                 <span aria-hidden> · </span>
+                                                {target.type_label.toLowerCase()}
+                                                <span aria-hidden> · </span>
                                                 {target.frequency_label.toLowerCase()}
                                             </p>
                                         </TableCell>
-                                        <TableCell className="font-mono font-medium tabular-nums">
-                                            {formatPrice(
-                                                target.latest_snapshot
-                                                    ?.price_amount,
-                                                target.latest_snapshot
-                                                    ?.currency,
-                                            )}
-                                        </TableCell>
                                         <TableCell>
-                                            {target.latest_snapshot ? (
-                                                <AvailabilityBadge
-                                                    availability={
-                                                        target.latest_snapshot
-                                                            .availability
-                                                    }
-                                                    label={
-                                                        target.latest_snapshot
-                                                            .availability_label
-                                                    }
-                                                />
-                                            ) : (
-                                                <span className="text-muted-foreground">
-                                                    —
-                                                </span>
-                                            )}
+                                            <LatestReading target={target} />
                                         </TableCell>
                                         <TableCell>
                                             <TargetStatusBadge
@@ -136,6 +121,13 @@ export default function CreepTargetsIndex({
                                             {formatRelative(
                                                 target.last_crept_at,
                                             )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <PauseButton
+                                                target={target}
+                                                variant="ghost"
+                                                compact
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ))}

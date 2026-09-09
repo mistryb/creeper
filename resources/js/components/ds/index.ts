@@ -8,6 +8,7 @@
  * the two sets are meant to be mixed freely.
  */
 export { Chip, ChipRow } from './chip';
+export { CopyBlock } from './copy-block';
 export { EmptyLine, EmptyState } from './empty-state';
 export { CheckField, Field, FormActions } from './field';
 export { Meter } from './meter';

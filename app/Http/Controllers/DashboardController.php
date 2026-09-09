@@ -53,7 +53,7 @@ class DashboardController extends Controller
             ),
             'watchlist' => CreepTargetResource::collection(
                 $user->creepTargets()
-                    ->with(['latestSnapshot', 'latestRun'])
+                    ->with(['latestSnapshot', 'latestChangelogSnapshot', 'latestRun'])
                     ->latest()
                     ->limit(5)
                     ->get()

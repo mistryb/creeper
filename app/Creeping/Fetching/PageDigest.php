@@ -8,26 +8,19 @@ use DOMNode;
 use DOMXPath;
 
 /**
- * A product page, boiled down to the parts worth paying a model to read.
+ * A page, boiled down to the parts worth paying a model to read.
  *
  * Raw HTML is mostly navigation, tracking and styling: expensive to send and
  * actively unhelpful. This keeps three layers, in descending order of how much
- * they can be trusted — schema.org data the shop published deliberately, the
+ * they can be trusted — schema.org data the site published deliberately, the
  * metadata it exposes for social cards, and finally the visible text — and
  * puts all three in one prompt so the model can reconcile them.
+ *
+ * Which parts of those layers survive is the {@see DigestProfile}'s business,
+ * because a shop page and a changelog hide their truth in different places.
  */
 final readonly class PageDigest
 {
-    /**
-     * Elements that never contain product information.
-     *
-     * @var array<int, string>
-     */
-    private const NOISE = [
-        'script', 'style', 'noscript', 'svg', 'iframe', 'template',
-        'nav', 'footer', 'header', 'aside', 'form', 'button', 'select',
-    ];
-
     /**
      * Elements that end a line of visible text.
      *
@@ -38,38 +31,6 @@ final readonly class PageDigest
         'figure', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'li', 'main',
         'ol', 'p', 'pre', 'section', 'table', 'td', 'th', 'tr', 'ul',
     ];
-
-    /**
-     * Metadata worth keeping, out of the hundreds of tags a page may carry.
-     *
-     * @var array<int, string>
-     */
-    private const META = [
-        'og:title', 'og:description', 'og:image', 'og:url', 'og:site_name',
-        'product:price:amount', 'product:price:currency', 'product:availability',
-        'product:brand', 'product:retailer_item_id',
-        'twitter:title', 'twitter:image', 'description',
-    ];
-
-    /**
-     * Microdata properties that describe a product.
-     *
-     * @var array<int, string>
-     */
-    private const ITEMPROPS = [
-        'name', 'price', 'priceCurrency', 'availability', 'sku', 'brand',
-        'ratingValue', 'reviewCount', 'image',
-    ];
-
-    /**
-     * The most schema.org data we will send, in characters.
-     */
-    private const STRUCTURED_BUDGET = 8000;
-
-    /**
-     * The most metadata we will send, in characters.
-     */
-    private const META_BUDGET = 2000;
 
     /**
      * @param  array<int, array<string, mixed>>  $structuredData
@@ -84,9 +45,14 @@ final readonly class PageDigest
 
     /**
      * Reduce a page to its digest.
+     *
+     * The profile decides what is worth keeping; a product page is assumed
+     * when none is given, because that is the only kind of page there was.
      */
-    public static function fromHtml(string $html, int $maxCharacters): self
+    public static function fromHtml(string $html, int $maxCharacters, ?DigestProfile $profile = null): self
     {
+        $profile ??= DigestProfile::product();
+
         $document = self::parse($html);
 
         if (! $document instanceof DOMDocument) {
@@ -96,16 +62,16 @@ final readonly class PageDigest
         $xpath = new DOMXPath($document);
 
         $structured = self::truncate(
-            self::structuredData($xpath),
-            self::STRUCTURED_BUDGET,
+            self::structuredData($xpath, $profile),
+            $profile->structuredBudget,
         );
 
-        $meta = self::metadata($xpath);
+        $meta = self::metadata($xpath, $profile);
 
         $spent = mb_strlen(self::encode($structured)) + mb_strlen(self::flatten($meta));
         $remaining = max(0, $maxCharacters - $spent);
 
-        $text = self::bodyText($document, $xpath);
+        $text = self::bodyText($document, $xpath, $profile);
         $truncated = mb_strlen($text) > $remaining;
 
         return new self(
@@ -197,13 +163,18 @@ final readonly class PageDigest
     }
 
     /**
-     * Every schema.org node on the page that describes a product.
+     * Every schema.org node on the page of a type this profile wants.
      *
      * @return array<int, array<string, mixed>>
      */
-    private static function structuredData(DOMXPath $xpath): array
+    private static function structuredData(DOMXPath $xpath, DigestProfile $profile): array
     {
-        $wanted = ['product', 'offer', 'aggregateoffer', 'aggregaterating'];
+        $wanted = $profile->structuredTypes;
+
+        if ($wanted === []) {
+            return [];
+        }
+
         $found = [];
 
         $nodes = $xpath->query('//script[@type="application/ld+json"]');
@@ -296,7 +267,7 @@ final readonly class PageDigest
      *
      * @return array<string, string>
      */
-    private static function metadata(DOMXPath $xpath): array
+    private static function metadata(DOMXPath $xpath, DigestProfile $profile): array
     {
         $meta = [];
 
@@ -323,7 +294,7 @@ final readonly class PageDigest
 
             $key = mb_strtolower($node->getAttribute('property') ?: $node->getAttribute('name'));
 
-            if (in_array($key, self::META, true) && ! isset($meta[$key])) {
+            if (in_array($key, $profile->meta, true) && ! isset($meta[$key])) {
                 $content = self::collapse($node->getAttribute('content'));
 
                 if ($content !== '') {
@@ -339,7 +310,7 @@ final readonly class PageDigest
 
             $property = $node->getAttribute('itemprop');
 
-            if (! in_array($property, self::ITEMPROPS, true)) {
+            if (! in_array($property, $profile->itemProps, true)) {
                 continue;
             }
 
@@ -360,13 +331,13 @@ final readonly class PageDigest
             }
         }
 
-        return self::within($meta, self::META_BUDGET);
+        return self::within($meta, $profile->metaBudget);
     }
 
     /**
      * The visible text of the page, with the furniture stripped out.
      */
-    private static function bodyText(DOMDocument $document, DOMXPath $xpath): string
+    private static function bodyText(DOMDocument $document, DOMXPath $xpath, DigestProfile $profile): string
     {
         foreach ($xpath->query('//comment()') ?: [] as $comment) {
             if ($comment instanceof DOMNode) {
@@ -374,7 +345,7 @@ final readonly class PageDigest
             }
         }
 
-        foreach (self::NOISE as $tag) {
+        foreach ($profile->noise as $tag) {
             $nodes = $xpath->query('//'.$tag);
 
             if ($nodes === false) {

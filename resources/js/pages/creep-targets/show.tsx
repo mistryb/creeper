@@ -3,7 +3,9 @@ import { ExternalLink, RefreshCw, Star } from 'lucide-react';
 import CreepRunController from '@/actions/App/Http/Controllers/CreepRunController';
 import CreepTargetController from '@/actions/App/Http/Controllers/CreepTargetController';
 import { ChangeList } from '@/components/creep/change-list';
+import { PauseButton } from '@/components/creep/pause-button';
 import { PriceHistoryChart } from '@/components/creep/price-history-chart';
+import { ReleaseList } from '@/components/creep/release-list';
 import {
     AvailabilityBadge,
     RunStatusBadge,
@@ -46,6 +48,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { creepTypeCopy } from '@/lib/creep-types';
+import type { CreepTypeCopy } from '@/lib/creep-types';
 import {
     formatDateTime,
     formatDuration,
@@ -55,6 +59,7 @@ import {
 } from '@/lib/format';
 import { index, show } from '@/routes/creep-targets';
 import type {
+    ChangelogSnapshot,
     CreepChange,
     CreepRun,
     CreepTarget,
@@ -69,7 +74,6 @@ type Props = {
     runs: ResourceCollection<CreepRun>;
     changes: ResourceCollection<CreepChange>;
     frequencies: SelectOption[];
-    statuses: SelectOption[];
     isCreeping: boolean;
 };
 
@@ -79,7 +83,6 @@ export default function ShowCreepTarget({
     runs,
     changes,
     frequencies,
-    statuses,
     isCreeping,
 }: Props) {
     setLayoutProps({
@@ -89,7 +92,12 @@ export default function ShowCreepTarget({
         ],
     });
 
+    // A target reads as whatever it was pointed at: one of these is the
+    // reading, and which one never changes for the life of the target.
     const snapshot = target.latest_snapshot ?? null;
+    const changelog = target.latest_changelog_snapshot ?? null;
+    const copy = creepTypeCopy(target.type);
+    const isPaused = target.status === 'paused';
 
     return (
         <>
@@ -100,7 +108,9 @@ export default function ShowCreepTarget({
                     <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2.5">
                             <h1 className="display-dot text-2xl sm:text-3xl">
-                                {snapshot?.title ?? target.display_name}
+                                {snapshot?.title ??
+                                    changelog?.product ??
+                                    target.display_name}
                             </h1>
                             <TargetStatusBadge
                                 status={target.status}
@@ -118,24 +128,52 @@ export default function ShowCreepTarget({
                         </a>
                     </div>
 
-                    <Form {...CreepRunController.store.form(target.id)}>
-                        {({ processing }) => (
-                            <Button
-                                type="submit"
-                                variant="secondary"
-                                disabled={processing || isCreeping}
-                            >
-                                <RefreshCw
-                                    aria-hidden
-                                    className={
-                                        isCreeping ? 'animate-spin' : undefined
+                    <div className="flex flex-wrap items-center gap-2">
+                        <PauseButton target={target} />
+
+                        <Form {...CreepRunController.store.form(target.id)}>
+                            {({ processing }) => (
+                                <Button
+                                    type="submit"
+                                    variant="secondary"
+                                    disabled={
+                                        processing || isCreeping || isPaused
                                     }
-                                />
-                                {isCreeping ? 'Creeping…' : 'Creep now'}
-                            </Button>
-                        )}
-                    </Form>
+                                    title={
+                                        isPaused
+                                            ? 'Resume creeping first'
+                                            : undefined
+                                    }
+                                >
+                                    <RefreshCw
+                                        aria-hidden
+                                        className={
+                                            isCreeping
+                                                ? 'animate-spin'
+                                                : undefined
+                                        }
+                                    />
+                                    {isCreeping ? 'Creeping…' : 'Creep now'}
+                                </Button>
+                            )}
+                        </Form>
+                    </div>
                 </header>
+
+                {isPaused && (
+                    <Alert variant="warning">
+                        <AlertTitle>Creeping is paused</AlertTitle>
+                        <AlertDescription>
+                            <p>
+                                Creeper is leaving this page alone. Everything
+                                it has found so far — the history, the run log
+                                and the changes below — is all still here.
+                                Resume whenever you want and it picks up where
+                                it left off.
+                            </p>
+                        </AlertDescription>
+                    </Alert>
+                )}
 
                 {target.status === 'failed' && (
                     <Alert variant="destructive">
@@ -143,32 +181,56 @@ export default function ShowCreepTarget({
                         <AlertDescription>
                             <p>
                                 Creeper failed {target.consecutive_failures}{' '}
-                                times in a row on this target. Fix the URL, or
-                                set it back to active below to try again.
+                                times in a row on this target, so it stopped
+                                trying. Fix the URL, then resume it.
                             </p>
                         </AlertDescription>
                     </Alert>
                 )}
 
                 <div className="grid gap-6 lg:grid-cols-3">
-                    <ProductPanel snapshot={snapshot} />
+                    {target.type === 'changelog' ? (
+                        <>
+                            <ChangelogPanel snapshot={changelog} copy={copy} />
 
-                    <Panel className="lg:col-span-2" lifted={false}>
-                        <PanelBar
-                            title="Price history"
-                            meta={
-                                snapshot
-                                    ? `as of ${formatRelative(snapshot.captured_at)}`
-                                    : undefined
-                            }
-                        />
-                        <div className="p-5">
-                            <PriceHistoryChart
-                                snapshots={history.data}
-                                currency={snapshot?.currency ?? null}
-                            />
-                        </div>
-                    </Panel>
+                            <Panel className="lg:col-span-2" lifted={false}>
+                                <PanelBar
+                                    title="Releases"
+                                    meta={
+                                        changelog
+                                            ? `as of ${formatRelative(changelog.captured_at)}`
+                                            : undefined
+                                    }
+                                />
+                                <div className="p-5">
+                                    <ReleaseList
+                                        releases={changelog?.releases ?? []}
+                                    />
+                                </div>
+                            </Panel>
+                        </>
+                    ) : (
+                        <>
+                            <ProductPanel snapshot={snapshot} copy={copy} />
+
+                            <Panel className="lg:col-span-2" lifted={false}>
+                                <PanelBar
+                                    title="Price history"
+                                    meta={
+                                        snapshot
+                                            ? `as of ${formatRelative(snapshot.captured_at)}`
+                                            : undefined
+                                    }
+                                />
+                                <div className="p-5">
+                                    <PriceHistoryChart
+                                        snapshots={history.data}
+                                        currency={snapshot?.currency ?? null}
+                                    />
+                                </div>
+                            </Panel>
+                        </>
+                    )}
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
@@ -176,7 +238,7 @@ export default function ShowCreepTarget({
                         <CardHeader>
                             <CardTitle>What has changed</CardTitle>
                             <CardDescription>
-                                Price moves and stock flips, newest first.
+                                {copy.changeHint} Newest first.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -200,7 +262,7 @@ export default function ShowCreepTarget({
                 <SettingsCard
                     target={target}
                     frequencies={frequencies}
-                    statuses={statuses}
+                    copy={copy}
                 />
             </Page>
         </>
@@ -211,27 +273,21 @@ export default function ShowCreepTarget({
  * What Creeper last read off the page, laid out as a receipt: the price large
  * in dot-matrix, the details on dotted leaders under it.
  */
-function ProductPanel({ snapshot }: { snapshot: ProductSnapshot | null }) {
+function ProductPanel({
+    snapshot,
+    copy,
+}: {
+    snapshot: ProductSnapshot | null;
+    copy: CreepTypeCopy;
+}) {
     if (!snapshot) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>The product</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Creeper hasn't managed to read this page yet. The first
-                        result usually lands within a minute.
-                    </p>
-                </CardContent>
-            </Card>
-        );
+        return <NotReadYet copy={copy} />;
     }
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>The product</CardTitle>
+                <CardTitle>{copy.readingTitle}</CardTitle>
                 <CardDescription>
                     As of {formatRelative(snapshot.captured_at)}.
                 </CardDescription>
@@ -291,6 +347,83 @@ function ProductPanel({ snapshot }: { snapshot: ProductSnapshot | null }) {
     );
 }
 
+/**
+ * What the changelog last said, laid out as the same receipt: the version
+ * large in dot-matrix where a price would be, the counts on dotted leaders.
+ */
+function ChangelogPanel({
+    snapshot,
+    copy,
+}: {
+    snapshot: ChangelogSnapshot | null;
+    copy: CreepTypeCopy;
+}) {
+    if (!snapshot) {
+        return <NotReadYet copy={copy} />;
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{copy.readingTitle}</CardTitle>
+                <CardDescription>
+                    As of {formatRelative(snapshot.captured_at)}.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <p className="numeral-dot text-4xl break-all">
+                    {snapshot.latest_version ?? '—'}
+                </p>
+
+                <dl className="space-y-2 border-t border-dashed border-rule pt-4 font-mono text-xs">
+                    {snapshot.product && (
+                        <ReceiptRow
+                            labelAs="dt"
+                            valueAs="dd"
+                            label="Product"
+                            value={snapshot.product}
+                        />
+                    )}
+                    {snapshot.latest_released_on && (
+                        <ReceiptRow
+                            labelAs="dt"
+                            valueAs="dd"
+                            label="Released"
+                            value={snapshot.latest_released_on}
+                        />
+                    )}
+                    <ReceiptRow
+                        labelAs="dt"
+                        valueAs="dd"
+                        label="Releases on page"
+                        value={snapshot.release_count.toLocaleString()}
+                    />
+                    <ReceiptRow
+                        labelAs="dt"
+                        valueAs="dd"
+                        label="Features listed"
+                        value={snapshot.feature_count.toLocaleString()}
+                    />
+                </dl>
+            </CardContent>
+        </Card>
+    );
+}
+
+/** The first creep hasn't landed yet. */
+function NotReadYet({ copy }: { copy: CreepTypeCopy }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{copy.readingTitle}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">{copy.waiting}</p>
+            </CardContent>
+        </Card>
+    );
+}
+
 function RunLog({ runs }: { runs: CreepRun[] }) {
     if (runs.length === 0) {
         return <EmptyLine>No runs yet</EmptyLine>;
@@ -325,18 +458,20 @@ function RunLog({ runs }: { runs: CreepRun[] }) {
 function SettingsCard({
     target,
     frequencies,
-    statuses,
+    copy,
 }: {
     target: CreepTarget;
     frequencies: SelectOption[];
-    statuses: SelectOption[];
+    copy: CreepTypeCopy;
 }) {
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Settings</CardTitle>
                 <CardDescription>
-                    Next creep {formatDateTime(target.next_creep_at)}.
+                    {target.next_creep_at
+                        ? `Next creep ${formatDateTime(target.next_creep_at)}.`
+                        : 'Nothing scheduled.'}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -348,7 +483,7 @@ function SettingsCard({
                     {({ processing, errors }) => (
                         <>
                             <Field
-                                label="Product URL"
+                                label={copy.urlLabel}
                                 htmlFor="url"
                                 error={errors.url}
                             >
@@ -374,67 +509,33 @@ function SettingsCard({
                                 />
                             </Field>
 
-                            <div className="grid gap-5 sm:grid-cols-2">
-                                <Field
-                                    label="Schedule"
-                                    htmlFor="frequency"
-                                    error={errors.frequency}
+                            <Field
+                                label="Schedule"
+                                htmlFor="frequency"
+                                error={errors.frequency}
+                            >
+                                <Select
+                                    name="frequency"
+                                    defaultValue={target.frequency}
                                 >
-                                    <Select
-                                        name="frequency"
-                                        defaultValue={target.frequency}
+                                    <SelectTrigger
+                                        id="frequency"
+                                        className="w-full"
                                     >
-                                        <SelectTrigger
-                                            id="frequency"
-                                            className="w-full"
-                                        >
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {frequencies.map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
-
-                                <Field
-                                    label="Status"
-                                    htmlFor="status"
-                                    error={errors.status}
-                                >
-                                    <Select
-                                        name="status"
-                                        defaultValue={
-                                            target.status === 'failed'
-                                                ? 'active'
-                                                : target.status
-                                        }
-                                    >
-                                        <SelectTrigger
-                                            id="status"
-                                            className="w-full"
-                                        >
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {statuses.map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
-                            </div>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {frequencies.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </Field>
 
                             <CheckField
                                 htmlFor="notify_on_change"
@@ -469,14 +570,15 @@ function DeleteTarget({ target }: { target: CreepTarget }) {
         <Dialog>
             <DialogTrigger asChild>
                 <Button variant="ghost" className="hover:text-ribbon-red">
-                    Stop creeping
+                    Delete target
                 </Button>
             </DialogTrigger>
             <DialogContent>
-                <DialogTitle>Stop creeping {target.display_name}?</DialogTitle>
+                <DialogTitle>Delete {target.display_name}?</DialogTitle>
                 <DialogDescription>
                     Everything Creeper found — the price history, the run log,
-                    the changes — goes with it. This cannot be undone.
+                    the changes — goes with it. This cannot be undone. To stop
+                    creeping without losing any of it, pause the target instead.
                 </DialogDescription>
 
                 <Form {...CreepTargetController.destroy.form(target.id)}>
@@ -492,7 +594,7 @@ function DeleteTarget({ target }: { target: CreepTarget }) {
                                 type="submit"
                                 disabled={processing}
                             >
-                                Delete target
+                                Delete for good
                             </Button>
                         </DialogFooter>
                     )}
