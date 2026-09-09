@@ -456,7 +456,7 @@ export default function DesignSystem() {
                             <Button variant="outline">Previous</Button>
                             <Button variant="ghost">Stop creeping</Button>
                             <Button variant="destructive">Delete target</Button>
-                            <Button variant="link">Manage subscription</Button>
+                            <Button variant="link">Back to targets</Button>
                         </Spec>
 
                         <Spec label="Sizes and states">

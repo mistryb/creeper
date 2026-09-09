@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Billing\PlanLimits;
 use App\Enums\CreepFrequency;
 use App\Enums\CreepType;
 use App\Enums\TargetStatus;
@@ -49,13 +48,12 @@ class CreepTargetController extends Controller
     /**
      * Show the form for pointing Creeper at something new.
      */
-    public function create(Request $request, PlanLimits $limits): Response
+    public function create(): Response
     {
         $this->authorize('create', CreepTarget::class);
 
         return Inertia::render('creep-targets/create', [
-            'frequencies' => $this->frequencyOptions($request, $limits),
-            'targetsRemaining' => $limits->targetsRemaining($request->user()),
+            'frequencies' => $this->frequencyOptions(),
         ]);
     }
 
@@ -87,7 +85,7 @@ class CreepTargetController extends Controller
     /**
      * Everything known about one target.
      */
-    public function show(Request $request, CreepTarget $creepTarget, PlanLimits $limits): Response
+    public function show(CreepTarget $creepTarget): Response
     {
         $this->authorize('view', $creepTarget);
 
@@ -105,7 +103,7 @@ class CreepTargetController extends Controller
                 $creepTarget->runs()->orderByDesc('started_at')->orderByDesc('id')->limit(20)->get()
             ),
             'changes' => CreepChangeResource::collection($creepTarget->changes()->latest('detected_at')->limit(30)->get()),
-            'frequencies' => $this->frequencyOptions($request, $limits),
+            'frequencies' => $this->frequencyOptions(),
             'statuses' => array_map(
                 fn (TargetStatus $status): array => ['value' => $status->value, 'label' => $status->label()],
                 [TargetStatus::Active, TargetStatus::Paused],
@@ -157,18 +155,18 @@ class CreepTargetController extends Controller
     }
 
     /**
-     * The schedules this user's plan lets them pick from.
+     * The schedules a target can be put on.
      *
      * @return array<int, array<string, string>>
      */
-    private function frequencyOptions(Request $request, PlanLimits $limits): array
+    private function frequencyOptions(): array
     {
         return array_map(
             fn (CreepFrequency $frequency): array => [
                 'value' => $frequency->value,
                 'label' => $frequency->label(),
             ],
-            $limits->allowedFrequencies($request->user()),
+            CreepFrequency::cases(),
         );
     }
 }

@@ -29,7 +29,6 @@ class ApiKeyController extends Controller
             'provider' => $user->creep_api_provider?->value,
             'providerLabel' => $user->creep_api_provider?->label(),
             'providers' => $this->providerOptions(),
-            'required' => (bool) config('billing.enabled') && (bool) config('billing.requires_api_key', true),
         ]);
     }
 

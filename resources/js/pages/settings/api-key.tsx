@@ -2,7 +2,6 @@ import { Form, Head } from '@inertiajs/react';
 import { useState } from 'react';
 import ApiKeyController from '@/actions/App/Http/Controllers/Settings/ApiKeyController';
 import { Field, FormActions, SectionHeading } from '@/components/ds';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,7 +24,6 @@ type Props = {
     provider: string | null;
     providerLabel: string | null;
     providers: ProviderOption[];
-    required: boolean;
 };
 
 export default function ApiKey({
@@ -34,7 +32,6 @@ export default function ApiKey({
     provider,
     providerLabel,
     providers,
-    required,
 }: Props) {
     const [selected, setSelected] = useState<string>(
         provider ?? providers[0]?.value ?? '',
@@ -57,18 +54,6 @@ export default function ApiKey({
                     title="API key"
                     description="Creeper reads pages with your key, so you pay your model provider directly."
                 />
-
-                {required && !hasKey && (
-                    <Alert variant="warning">
-                        <AlertTitle>Creeping is paused</AlertTitle>
-                        <AlertDescription>
-                            <p>
-                                Your targets stay exactly as they are and pick
-                                back up as soon as a key is on file.
-                            </p>
-                        </AlertDescription>
-                    </Alert>
-                )}
 
                 {hasKey && (
                     <div className="flex flex-wrap items-center justify-between gap-4 border border-rule bg-card px-4 py-3 shadow-xs">

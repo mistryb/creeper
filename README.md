@@ -6,8 +6,9 @@ Right now that means **product creeping**: Creeper watches a product page,
 records what it finds every time it looks, and tells you when the price moves
 or the thing comes back in stock.
 
-Creeper is a paid service *and* an app you can run on your own box for free.
-It's the same codebase either way — billing is a switch, and it ships off.
+Creeper is an app you run on your own box. There are no plans, no limits and
+no billing — you bring a model API key and it costs you whatever your provider
+charges.
 
 ---
 
@@ -226,30 +227,6 @@ Then set `CREEP_DRIVER=browser`. Nothing else in the application changes.
 
 ---
 
-## Running it as a service
-
-```env
-BILLING_ENABLED=true
-STRIPE_KEY=pk_live_…
-STRIPE_SECRET=sk_live_…
-STRIPE_WEBHOOK_SECRET=whsec_…
-STRIPE_PRICE_PRO=price_…
-```
-
-That switch turns on the billing pages, the Stripe checkout flow, and the plan
-limits in `config/billing.php`:
-
-```php
-'free' => ['targets' => 3,  'min_frequency' => 'daily'],
-'pro'  => ['targets' => 50, 'min_frequency' => 'hourly'],
-```
-
-Point a Stripe webhook at `/stripe/webhook`. With `BILLING_ENABLED=false` all
-of that disappears — the routes 404, the nav item is gone, and nobody has a
-limit.
-
----
-
 ## Environment reference
 
 | Variable | Default | What it does |
@@ -271,7 +248,6 @@ limit.
 | `CREEP_CALLBACK_TTL` | `180` | Minutes a run's signed callback stays valid |
 | `CREEP_RETRIES` | `3` | Attempts before a run is marked failed |
 | `DB_QUEUE_RETRY_AFTER` | `330` | Must exceed the longest job timeout |
-| `BILLING_ENABLED` | `false` | Turns the whole SaaS side on |
 
 ---
 

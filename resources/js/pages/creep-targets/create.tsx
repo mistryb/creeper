@@ -7,7 +7,6 @@ import {
     Page,
     SectionHeading,
 } from '@/components/ds';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -23,10 +22,8 @@ import type { SelectOption } from '@/types';
 
 export default function CreateCreepTarget({
     frequencies,
-    targetsRemaining,
 }: {
     frequencies: SelectOption[];
-    targetsRemaining: number | null;
 }) {
     return (
         <>
@@ -39,20 +36,6 @@ export default function CreateCreepTarget({
                 />
 
                 <div className="max-w-xl space-y-6">
-                    {targetsRemaining !== null && (
-                        <Alert
-                            variant={
-                                targetsRemaining === 0 ? 'warning' : 'default'
-                            }
-                        >
-                            <AlertDescription>
-                                {targetsRemaining === 0
-                                    ? 'You have used every target on your plan.'
-                                    : `${targetsRemaining} target${targetsRemaining === 1 ? '' : 's'} left on your plan.`}
-                            </AlertDescription>
-                        </Alert>
-                    )}
-
                     <Form
                         {...CreepTargetController.store.form()}
                         className="space-y-5"

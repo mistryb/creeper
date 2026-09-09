@@ -2,7 +2,6 @@
 
 use App\Creeping\CreepManager;
 use App\Enums\CreepProvider;
-use App\Jobs\RunCreep;
 use App\Models\CreepRun;
 use App\Models\CreepTarget;
 use App\Models\User;
@@ -110,17 +109,6 @@ it('sends no key at all when the user has not set one', function () {
     app(CreepManager::class)->driver('http')->creep($run);
 
     Http::assertSent(fn (Request $request): bool => ! array_key_exists('api_key', $request->data()));
-});
-
-it('will not creep for a subscriber who has no key on file', function () {
-    $user = User::factory()->create();
-    subscribe($user);
-
-    $target = CreepTarget::factory()->for($user)->create();
-
-    RunCreep::dispatchSync($target);
-
-    expect($target->runs()->sole()->error)->toContain('No model API key');
 });
 
 it('saves the provider alongside the key', function () {

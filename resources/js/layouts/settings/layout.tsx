@@ -1,15 +1,14 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import { Page, SectionHeading } from '@/components/ds';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editApiKey } from '@/routes/api-key';
-import { show as billing } from '@/routes/billing';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
+const navItems: NavItem[] = [
     { title: 'Profile', href: edit(), icon: null },
     { title: 'Security', href: editSecurity(), icon: null },
     { title: 'API key', href: editApiKey(), icon: null },
@@ -17,23 +16,10 @@ const sidebarNavItems: NavItem[] = [
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
-    const billingEnabled = usePage().props.billing.enabled;
-
-    // Self-hosted installs have no billing routes at all, so the tab would
-    // only lead to a 404.
-    const navItems: NavItem[] = billingEnabled
-        ? [
-              ...sidebarNavItems,
-              { title: 'Billing', href: billing(), icon: null },
-          ]
-        : sidebarNavItems;
 
     return (
         <Page>
-            <SectionHeading
-                title="Settings"
-                note="Your account, your key, your bill"
-            />
+            <SectionHeading title="Settings" note="Your account, your key" />
 
             <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
                 {/*

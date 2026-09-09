@@ -90,12 +90,3 @@ export type PaginatedCollection<T> = ResourceCollection<T> & {
         next: string | null;
     };
 };
-
-export type BillingPlan = {
-    key: string;
-    name: string;
-    price: string | null;
-    targets: number | null;
-    min_frequency: string | null;
-    included_runs?: number | null;
-};

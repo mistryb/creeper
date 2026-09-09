@@ -102,37 +102,13 @@ it('reports a target that is mid-creep so the button can wait', function () {
         ->assertInertia(fn ($page) => $page->where('isCreeping', true));
 });
 
-it('shows the new target form with the schedules the plan allows', function () {
-    $user = User::factory()->create();
-    subscribe($user);
-
-    $this->actingAs($user)
+it('offers every schedule on the new target form', function () {
+    $this->actingAs(User::factory()->create())
         ->get(route('creep-targets.create'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('creep-targets/create')
-            ->where('targetsRemaining', null)
             ->has('frequencies', 4)
-        );
-});
-
-it('offers an unsubscribed account no targets at all', function () {
-    config(['billing.enabled' => true]);
-
-    $this->actingAs(User::factory()->create())
-        ->get(route('creep-targets.create'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('targetsRemaining', 0));
-});
-
-it('offers every schedule when self-hosted', function () {
-    config(['billing.enabled' => false]);
-
-    $this->actingAs(User::factory()->create())
-        ->get(route('creep-targets.create'))
-        ->assertInertia(fn ($page) => $page
-            ->has('frequencies', 4)
-            ->where('targetsRemaining', null)
         );
 });
 

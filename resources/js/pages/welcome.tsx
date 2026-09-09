@@ -12,7 +12,6 @@ import {
     Ok,
     Panel,
     PanelBar,
-    ReceiptRow,
     SectionHeading,
     Terminal,
 } from '@/components/ds';
@@ -179,17 +178,9 @@ function SetupStep({
     );
 }
 
-type Pricing = {
-    amount: string;
-    period: string;
-    included_runs: number;
-    overage: string;
-};
-
-export default function Welcome({ pricing }: { pricing: Pricing }) {
+export default function Welcome() {
     const { auth } = usePage().props;
     const { typed, revealed } = useExampleRun();
-    const includedRuns = pricing.included_runs.toLocaleString();
 
     const signUpHref = auth.user ? create() : login();
 
@@ -222,10 +213,10 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                                 How it works
                             </a>
                             <a
-                                href="#price"
+                                href="#start"
                                 className="hidden text-paper-lit/70 transition-colors hover:text-paper-lit sm:inline"
                             >
-                                Price
+                                Get started
                             </a>
                             <Link
                                 href={auth.user ? dashboard() : login()}
@@ -376,27 +367,23 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                         </ol>
                     </section>
 
-                    <section id="price" className="bg-ink text-paper-lit">
+                    <section id="start" className="bg-ink text-paper-lit">
                         <div className="mx-auto grid w-full max-w-5xl items-start gap-8 px-4 py-12 sm:px-10 sm:py-22 lg:grid-cols-[1fr_22rem] lg:gap-14">
                             <div>
-                                <Eyebrow tone="pale">
-                                    Pricing, all of it
-                                </Eyebrow>
+                                <Eyebrow tone="pale">Yours to run</Eyebrow>
 
                                 <Display
                                     size="lg"
                                     className="my-4 max-w-[16ch] text-balance"
                                 >
-                                    One plan. No tiers, no seats.
+                                    One install. No tiers, no seats.
                                 </Display>
 
                                 <p className="max-w-[32rem] text-paper-lit/70">
-                                    {pricing.amount} a month covers as many
-                                    pages as you like, and {includedRuns} checks
-                                    to spend across them. Past that, checks are{' '}
-                                    {pricing.overage} each — so a quiet month
-                                    costs {pricing.amount} and a busy one costs
-                                    a little more.
+                                    Creeper runs on your own box, watching as
+                                    many pages as you like, as often as you
+                                    like. Nothing is metered and nothing is
+                                    capped.
                                 </p>
                                 <p className="mt-3.5 max-w-[32rem] text-paper-lit/70">
                                     The thinking runs on{' '}
@@ -410,62 +397,21 @@ export default function Welcome({ pricing }: { pricing: Pricing }) {
                                 </p>
                             </div>
 
-                            <div className="drop-shadow-[0_10px_22px_rgba(0,0,0,0.45)]">
-                                <div className="receipt-paper space-y-3 bg-white px-6 py-9 font-mono text-[0.8125rem] text-ink tabular-nums">
-                                    <div className="border-b border-dashed border-rule pb-3.5 text-center">
-                                        <strong className="block font-semibold tracking-[0.22em]">
-                                            CREEPER
-                                        </strong>
-                                        <span className="text-[0.6875rem] tracking-[0.1em] text-ink-soft">
-                                            ONE LINE ITEM, EVERY MONTH
-                                        </span>
-                                    </div>
+                            <div className="border border-paper-lit/20 px-6 py-9">
+                                <p className="label-micro text-paper-lit/55">
+                                    Ready when you are
+                                </p>
 
-                                    <ReceiptRow
-                                        label="Pages watched"
-                                        value="unlimited"
-                                    />
-                                    <ReceiptRow
-                                        label="Checks included"
-                                        value={`${includedRuns} / mo`}
-                                    />
-                                    <ReceiptRow
-                                        label="Extra checks"
-                                        value={`${pricing.overage} each`}
-                                    />
-                                    <ReceiptRow
-                                        label="Model API key"
-                                        value="yours"
-                                    />
+                                <p className="mt-3.5 mb-6 text-paper-lit/70">
+                                    Point Creeper at a product page and it takes
+                                    the first look straight away.
+                                </p>
 
-                                    <div className="flex items-end justify-between gap-3 border-t border-dashed border-rule pt-4">
-                                        <span className="label-micro text-ink-soft">
-                                            Total due
-                                        </span>
-                                        <span>
-                                            <span className="numeral-dot text-[2.9rem]">
-                                                {pricing.amount}
-                                            </span>{' '}
-                                            <span className="text-[0.6875rem] tracking-[0.12em] text-ink-soft uppercase">
-                                                / {pricing.period}
-                                            </span>
-                                        </span>
-                                    </div>
-
-                                    <Button
-                                        asChild
-                                        size="lg"
-                                        className="w-full"
-                                    >
-                                        <Link href={signUpHref}>
-                                            Start creeping
-                                        </Link>
-                                    </Button>
-
-                                    <p className="text-center text-[0.625rem] tracking-[0.1em] text-ink-soft uppercase">
-                                        Cancel any time · Usage billed monthly
-                                    </p>
-                                </div>
+                                <Button asChild size="lg" className="w-full">
+                                    <Link href={signUpHref}>
+                                        Start creeping
+                                    </Link>
+                                </Button>
                             </div>
                         </div>
                     </section>

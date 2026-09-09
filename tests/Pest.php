@@ -1,8 +1,6 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /*
@@ -45,33 +43,3 @@ expect()->extend('toBeOne', function () {
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
-
-/**
- * Put a user on the paid plan without going anywhere near Stripe.
- *
- * Cashier answers `subscribed()` and `subscribedToPrice()` from the local
- * subscriptions tables, so a plain pair of rows is a complete subscription as
- * far as every plan check in the application is concerned.
- */
-function subscribe(User $user, string $price = 'price_creeper_test', string $status = 'active'): void
-{
-    config([
-        'billing.enabled' => true,
-        'billing.plans.creeper.stripe_price' => $price,
-    ]);
-
-    $subscription = $user->subscriptions()->create([
-        'type' => (string) config('billing.subscription', 'default'),
-        'stripe_id' => 'sub_'.Str::random(14),
-        'stripe_status' => $status,
-        'stripe_price' => $price,
-        'quantity' => 1,
-    ]);
-
-    $subscription->items()->create([
-        'stripe_id' => 'si_'.Str::random(14),
-        'stripe_product' => 'prod_creeper_test',
-        'stripe_price' => $price,
-        'quantity' => 1,
-    ]);
-}

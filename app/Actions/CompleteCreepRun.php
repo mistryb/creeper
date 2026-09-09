@@ -7,7 +7,6 @@ use App\Creeping\Data\ProductPayload;
 use App\Creeping\Exceptions\InvalidCreepPayload;
 use App\Enums\RunStatus;
 use App\Enums\TargetStatus;
-use App\Jobs\ReportCreepRunUsage;
 use App\Models\CreepChange;
 use App\Models\CreepRun;
 use App\Models\ProductSnapshot;
@@ -69,10 +68,8 @@ class CompleteCreepRun
             return ['snapshot' => $snapshot, 'changes' => $changes];
         });
 
-        // Outside the transaction: neither a meter event nor a notification
-        // should be able to fire against a snapshot that later rolls back.
-        ReportCreepRunUsage::dispatch($run);
-
+        // Outside the transaction: a notification must never fire against a
+        // snapshot that later rolls back.
         if ($outcome['changes'] !== [] && $run->target->notify_on_change) {
             $run->target->user->notify(new ProductChanged($run->target, $outcome['changes']));
         }

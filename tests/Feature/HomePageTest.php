@@ -15,30 +15,6 @@ it('keeps the landing page reachable once you are signed in', function () {
         ->assertInertia(fn ($page) => $page->component('welcome'));
 });
 
-it('quotes the price from config rather than from the markup', function () {
-    config([
-        'billing.plans.creeper.amount' => 700,
-        'billing.plans.creeper.included_runs' => 1500,
-        'billing.meter.unit_amount' => 1,
-    ]);
-
-    $this->get(route('home'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->where('pricing.amount', '$7')
-            ->where('pricing.period', 'month')
-            ->where('pricing.included_runs', 1500)
-            ->where('pricing.overage', '$0.01')
-        );
-});
-
-it('follows the config when the price changes', function () {
-    config(['billing.plans.creeper.amount' => 1250]);
-
-    $this->get(route('home'))
-        ->assertInertia(fn ($page) => $page->where('pricing.amount', '$12.50'));
-});
-
 it('loads all three design system typefaces everywhere', function () {
     // Mono and Doto stopped belonging to the landing page when they became
     // part of the design system: the app sets labels in one and figures in the
