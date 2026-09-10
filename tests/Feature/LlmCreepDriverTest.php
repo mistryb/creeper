@@ -265,6 +265,28 @@ it('sends the key to the provider the user picked, not the configured one', func
     expect($during['driver'])->toBe('openrouter');
 });
 
+it('registers the configured provider when the user has no key of their own', function () {
+    config(['creeping.drivers.llm.provider' => 'openrouter']);
+
+    Http::fake(['shop.test/*' => Http::response(productPage(), 200, ['Content-Type' => 'text/html'])]);
+
+    $during = null;
+
+    ProductPageAgent::fake(function (string $prompt) use (&$during): array {
+        $during = config('ai.providers.creep_app');
+
+        return extracted();
+    });
+
+    $run = CreepRun::factory()->running()->create();
+    $run->target->forceFill(['url' => 'https://shop.test/p/1'])->save();
+
+    llmDriver()->creep($run->fresh());
+
+    expect($during)->toBe(['driver' => 'openrouter', 'key' => 'sk-test-application-key-0000'])
+        ->and(config('ai.providers.creep_app'))->toBeNull();
+});
+
 it('refuses to run with no key configured anywhere', function () {
     config(['creeping.drivers.llm.key' => null]);
 

@@ -4,6 +4,7 @@ import {
     Chip,
     ChipRow,
     CopyBlock,
+    CopyDock,
     Display,
     Eyebrow,
     Panel,
@@ -20,6 +21,10 @@ import { REPOSITORY_URL } from '@/lib/links';
  * Creeper that has to be running for a creep to fire — the queue worker and
  * the scheduler — because an agent that skips those deploys a site that looks
  * fine and never creeps anything.
+ *
+ * It also asks who is allowed in. An install left open is one anybody who
+ * finds the URL can sign into, so the addresses are named at deploy time and
+ * adding somebody later is another deploy.
  */
 const PROMPT = `Deploy Creeper on Laravel Cloud for me.
 
@@ -43,6 +48,9 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
 5. Set the environment with "cloud environment:variables -n --force":
      APP_NAME=Creeper
      MARKETING_MODE=false
+     AUTHORIZED_EMAILS=...          the addresses allowed to sign in, comma
+                                    separated — ask me who, and put mine
+                                    first. Nobody else can get an account
      CREEP_DRIVER=llm
      CREEP_LLM_PROVIDER=anthropic
      CREEP_LLM_API_KEY=...          ask me for this
@@ -56,7 +64,10 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
 
 6. Finish with "cloud deploy:monitor -n". If the deploy fails, show me what
    broke before you change anything. When it lands, give me the URL — I sign
-   in at /login with my email address and the code it sends me.`;
+   in at /login with my email address and the code it sends me.
+
+7. Tell me that adding somebody later means adding their address to
+   AUTHORIZED_EMAILS and deploying again, and how to do that.`;
 
 /** One thing the agent does, numbered the way the landing page numbers setup. */
 function AgentStep({
@@ -149,7 +160,7 @@ export default function Deploy() {
                         as="h2"
                         className="mb-5"
                         title="Copy this, paste it in"
-                        note="Then answer the two things it asks you for"
+                        note="Then answer the three things it asks you for"
                     />
 
                     <CopyBlock
@@ -160,11 +171,12 @@ export default function Deploy() {
                     />
 
                     <p className="mt-4 max-w-[40rem] text-sm text-ink-soft">
-                        The prompt asks for your model API key and your mail
-                        credentials, and nothing else. It will not guess at
-                        either — Creeper signs people in by emailing a six digit
-                        code, so an install that cannot send mail cannot let
-                        anybody in.
+                        The prompt asks for three things: your model API key,
+                        your mail credentials, and the addresses allowed to sign
+                        in. It will not guess at any of them — Creeper signs
+                        people in by emailing a six digit code, so an install
+                        that cannot send mail cannot let anybody in, and an
+                        install that admits every address is not yours.
                     </p>
                 </section>
 
@@ -217,8 +229,9 @@ export default function Deploy() {
 
                         <AgentStep step="05" heading="Hand you the URL">
                             It watches the deploy land, then gives you the
-                            address. Sign in with your email address, add your
-                            model key under Settings, and put a page on watch.
+                            address. Sign in with one of the addresses you
+                            authorized, add your model key under Settings, and
+                            put a page on watch.
                         </AgentStep>
                     </ol>
                 </section>
@@ -281,6 +294,12 @@ export default function Deploy() {
                     </div>
                 </section>
             </MarketingLayout>
+
+            <CopyDock
+                title="deploy prompt"
+                label="Copy the prompt"
+                text={PROMPT}
+            />
         </>
     );
 }

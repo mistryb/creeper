@@ -14,6 +14,7 @@ import {
     Chip,
     ChipRow,
     CopyBlock,
+    CopyDock,
     Display,
     Emitted,
     EmptyLine,
@@ -877,6 +878,21 @@ export default function DesignSystem() {
                             one piece — a prompt, a command. The button reports
                             back in place rather than raising a toast.
                         </p>
+
+                        <Spec
+                            label="Copy dock"
+                            className="bg-paper"
+                            use="The same key, on a plate fixed to the foot of the viewport and centred, for a page whose one job is to hand something over. The plate carries it over the ink slabs a marketing page ends on, where a bare ink-outlined key would lose its edges. Amber because it is the one thing on the page asking to be pressed; green once it has been. It is fixed and centred on a real page — pinned static here so the specimen sits still."
+                        >
+                            <CopyDock
+                                className="static translate-x-0"
+                                title="deploy prompt"
+                                label="Copy the prompt"
+                                text={
+                                    'Deploy Creeper on Laravel Cloud for me.\n\n1. Clone the repository and cd into it.'
+                                }
+                            />
+                        </Spec>
 
                         <p className="max-w-prose text-sm text-ink-soft">
                             <code className="font-mono">Terminal</code> is a{' '}

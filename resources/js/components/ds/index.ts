@@ -9,6 +9,7 @@
  */
 export { Chip, ChipRow } from './chip';
 export { CopyBlock } from './copy-block';
+export { CopyDock } from './copy-dock';
 export { EmptyLine, EmptyState } from './empty-state';
 export { CheckField, Field, FormActions } from './field';
 export { Meter } from './meter';
