@@ -74,6 +74,7 @@ type Props = {
     runs: ResourceCollection<CreepRun>;
     changes: ResourceCollection<CreepChange>;
     frequencies: SelectOption[];
+    apiKeys: SelectOption[];
     isCreeping: boolean;
 };
 
@@ -83,6 +84,7 @@ export default function ShowCreepTarget({
     runs,
     changes,
     frequencies,
+    apiKeys,
     isCreeping,
 }: Props) {
     setLayoutProps({
@@ -262,6 +264,7 @@ export default function ShowCreepTarget({
                 <SettingsCard
                     target={target}
                     frequencies={frequencies}
+                    apiKeys={apiKeys}
                     copy={copy}
                 />
             </Page>
@@ -458,10 +461,12 @@ function RunLog({ runs }: { runs: CreepRun[] }) {
 function SettingsCard({
     target,
     frequencies,
+    apiKeys,
     copy,
 }: {
     target: CreepTarget;
     frequencies: SelectOption[];
+    apiKeys: SelectOption[];
     copy: CreepTypeCopy;
 }) {
     return (
@@ -526,6 +531,41 @@ function SettingsCard({
                                     </SelectTrigger>
                                     <SelectContent>
                                         {frequencies.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+
+                            <Field
+                                label="API key"
+                                htmlFor="api_key_id"
+                                error={errors.api_key_id}
+                                hint={
+                                    target.api_key_id === null
+                                        ? 'The key this target used has been removed. Choose another before it can be crept again.'
+                                        : 'Creeper spends this key every time it reads the page.'
+                                }
+                            >
+                                <Select
+                                    name="api_key_id"
+                                    defaultValue={
+                                        target.api_key_id ?? undefined
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id="api_key_id"
+                                        className="w-full"
+                                    >
+                                        <SelectValue placeholder="Pick a key" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {apiKeys.map((option) => (
                                             <SelectItem
                                                 key={option.value}
                                                 value={option.value}

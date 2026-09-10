@@ -38,16 +38,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('security.sessions.destroy');
 
     /*
-     * The user's own model API key. Writes are throttled because a key is a
-     * credential, and swapping one repeatedly is never a legitimate rhythm.
+     * The user's own keyring. Every model API key Creeper spends lives here —
+     * there is none in the environment — and each target picks the one it
+     * spends. Writes are throttled because a key is a credential, and adding
+     * or dropping them repeatedly is never a legitimate rhythm.
      */
-    Route::get('settings/api-key', [ApiKeyController::class, 'edit'])->name('api-key.edit');
+    Route::get('settings/api-keys', [ApiKeyController::class, 'index'])->name('api-keys.index');
 
-    Route::put('settings/api-key', [ApiKeyController::class, 'update'])
+    Route::post('settings/api-keys', [ApiKeyController::class, 'store'])
         ->middleware('throttle:6,1')
-        ->name('api-key.update');
+        ->name('api-keys.store');
 
-    Route::delete('settings/api-key', [ApiKeyController::class, 'destroy'])
+    Route::delete('settings/api-keys/{api_key}', [ApiKeyController::class, 'destroy'])
         ->middleware('throttle:6,1')
-        ->name('api-key.destroy');
+        ->name('api-keys.destroy');
 });

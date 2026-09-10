@@ -12,6 +12,7 @@ use App\Http\Resources\CreepRunResource;
 use App\Http\Resources\CreepTargetResource;
 use App\Http\Resources\ProductSnapshotResource;
 use App\Jobs\RunCreep;
+use App\Models\ApiKey;
 use App\Models\CreepTarget;
 use App\Models\ProductSnapshot;
 use Illuminate\Database\Eloquent\Collection;
@@ -50,13 +51,16 @@ class CreepTargetController extends Controller
     /**
      * Show the form for pointing Creeper at something new.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         $this->authorize('create', CreepTarget::class);
 
         return Inertia::render('creep-targets/create', [
             'types' => $this->typeOptions(),
             'frequencies' => $this->frequencyOptions(),
+            // Creeping is paid for with one of the user's own keys, so the
+            // form cannot be completed — or even usefully shown — without one.
+            'apiKeys' => $this->apiKeyOptions($request),
         ]);
     }
 
@@ -68,7 +72,7 @@ class CreepTargetController extends Controller
         $this->authorize('create', CreepTarget::class);
 
         $target = $request->user()->creepTargets()->create([
-            ...$request->safe()->only(['url', 'name', 'frequency', 'notify_on_change']),
+            ...$request->safe()->only(['url', 'name', 'api_key_id', 'frequency', 'notify_on_change']),
             'type' => $request->safe()->enum('type', CreepType::class),
             'status' => TargetStatus::Active,
         ]);
@@ -88,11 +92,11 @@ class CreepTargetController extends Controller
     /**
      * Everything known about one target.
      */
-    public function show(CreepTarget $creepTarget): Response
+    public function show(Request $request, CreepTarget $creepTarget): Response
     {
         $this->authorize('view', $creepTarget);
 
-        $creepTarget->load(['latestSnapshot', 'latestChangelogSnapshot', 'latestRun']);
+        $creepTarget->load(['latestSnapshot', 'latestChangelogSnapshot', 'latestRun', 'apiKey']);
 
         return Inertia::render('creep-targets/show', [
             'target' => CreepTargetResource::make($creepTarget),
@@ -102,6 +106,7 @@ class CreepTargetController extends Controller
             ),
             'changes' => CreepChangeResource::collection($creepTarget->changes()->latest('detected_at')->limit(30)->get()),
             'frequencies' => $this->frequencyOptions(),
+            'apiKeys' => $this->apiKeyOptions($request),
             'isCreeping' => $creepTarget->runs()->whereIn('status', ['queued', 'running'])->exists(),
         ]);
     }
@@ -114,7 +119,7 @@ class CreepTargetController extends Controller
         $this->authorize('update', $creepTarget);
 
         $creepTarget->fill($request->safe()->only([
-            'url', 'name', 'frequency', 'notify_on_change', 'status',
+            'url', 'name', 'api_key_id', 'frequency', 'notify_on_change', 'status',
         ]));
 
         // Un-pausing, or moving to a different schedule, means recomputing
@@ -180,6 +185,23 @@ class CreepTargetController extends Controller
             ],
             CreepType::cases(),
         );
+    }
+
+    /**
+     * The keys this user can put a target on, named as they named them.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function apiKeyOptions(Request $request): array
+    {
+        return $request->user()
+            ->apiKeys()
+            ->get()
+            ->map(fn (ApiKey $key): array => [
+                'value' => (string) $key->id,
+                'label' => $key->label(),
+            ])
+            ->all();
     }
 
     /**

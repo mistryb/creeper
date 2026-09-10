@@ -77,9 +77,10 @@ server if it is installed (`brew install mailpit`), so the code is waiting at
 <http://localhost:8025>. Without it, set `MAIL_MAILER=log` and read the code out
 of `storage/logs/laravel.log`.
 
-Out of the box `CREEP_DRIVER=llm` reads pages with a model, so it needs a key —
-either `CREEP_LLM_API_KEY` in your `.env`, or one you add under Settings → API
-key. Without one, runs fail and say so.
+Out of the box `CREEP_DRIVER=llm` reads pages with a model, so it needs a key.
+Keys live in the app, never in your environment: add one under Settings → API
+keys, and pick which key a target spends when you create it. Keep as many as
+you like. Without one, runs fail and say so.
 
 To look around before committing to a provider, set `CREEP_DRIVER=fake`. It
 invents plausible product data locally and needs no key at all.
@@ -92,6 +93,97 @@ For the schedule to fire, run Laravel's scheduler:
 
 Everything defaults to SQLite and a database queue, so there's nothing else to
 stand up.
+
+---
+
+## Running it on Laravel Cloud
+
+Creeper is an ordinary Laravel app, so [Laravel Cloud](https://cloud.laravel.com)
+runs it as it is — no container to build, and nothing to keep alive yourself.
+If you keep a terminal open for an agent, the `/deploy` page on a marketing-mode
+install hands it a prompt that does all of this. By hand it is six decisions.
+
+### Ship it
+
+```bash
+composer global require laravel/cloud-cli
+cloud auth -n
+cloud ship -n      # read `cloud ship -h` first and pass every option explicitly
+```
+
+Build with `npm ci && npm run build`, and deploy with
+`php artisan migrate --force`. If you turn on the App cluster's *Use Inertia
+SSR* toggle, build with `npm run build:ssr` instead.
+
+### A Postgres database
+
+Cloud doesn't run SQLite, so attach a Serverless Postgres database. Attaching
+it injects `DB_HOST`, `DB_DATABASE`, `DB_USERNAME` and `DB_PASSWORD`; set
+`DB_CONNECTION=pgsql` yourself. Sessions, the cache and the queue all live in
+that same database, so it stays the only thing you stand up.
+
+### The scheduler
+
+Click the App compute cluster on the environment's canvas, enable the
+**Scheduler** toggle, then save and redeploy. That is the crontab line above:
+Cloud runs `schedule:run` every minute for you. Without it nothing ever comes
+due and nothing is ever crept.
+
+Cloud wakes a sleeping environment to run scheduled tasks, and it then stays
+awake for the length of the sleep timeout. Creeper looks for due targets every
+minute, so don't expect Scale to Zero to save you anything here — it will
+essentially never get to sleep.
+
+### A queue worker
+
+The creeping itself happens on the queue, so something has to be running
+`queue:work` or targets come due and nobody picks them up. Two ways:
+
+**A background process on the app cluster.** Under the App cluster's
+**Background processes**, add a `queue:work` process. Keep
+`QUEUE_CONNECTION=database`, and keep `DB_QUEUE_RETRY_AFTER` above
+`RunCreep::$timeout` — a run whose reservation lapses while it is still going
+is handed to a second worker, which means creeping the page and paying for the
+inference twice.
+
+**A managed queue.** Deploying one sets `QUEUE_CONNECTION=cloud`, after which
+`DB_QUEUE_RETRY_AFTER` stops meaning anything: Cloud extends a job's visibility
+for as long as it runs. It wants `aws/aws-sdk-php` required in `composer.json`,
+which today it only is indirectly. Mind the compute class — a Flex worker gives
+a job 90 seconds, which the `llm` driver fits inside with
+`CREEP_LLM_BUDGET=70`, but a synchronous `http` agent on the default
+`CREEP_AGENT_TIMEOUT=120` does not. Answer `202` and use the callback, or put
+the queue on Pro.
+
+### Mail, or nobody can sign in
+
+Signing in means receiving a six digit code, so an install whose mail doesn't
+work is an install nobody can get into — and there is no Mailpit on Cloud:
+
+```env
+MAIL_MAILER=resend
+RESEND_API_KEY=re_...
+MAIL_FROM_ADDRESS=creeper@your-domain.example
+```
+
+### The rest of the environment
+
+Set the rest with `cloud environment:variables -n --force`:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+DB_CONNECTION=pgsql
+AUTHORIZED_EMAILS=you@example.com   # who is allowed an account, comma separated
+MARKETING_MODE=false                # "/" is the sign-in page
+CREEP_DRIVER=llm
+```
+
+Adding somebody later is an edit to `AUTHORIZED_EMAILS` and another deploy;
+there is no invite flow, deliberately. Note what isn't there: no model API key.
+Keys are added in the app, so the first thing to do once you're signed in is
+put one on your keyring under Settings → API keys. Nothing can be crept
+without one.
 
 ---
 
@@ -167,12 +259,11 @@ failed run rather than an empty product card.
 
 ### The middle way: let Creeper read the page itself
 
-This is the default. Set a key and there is nothing else to do:
+This is the default. Add a key under Settings → API keys, choose it when you
+create a target, and there is nothing else to do:
 
 ```env
 CREEP_DRIVER=llm
-CREEP_LLM_PROVIDER=anthropic
-CREEP_LLM_API_KEY=sk-ant-…
 ```
 
 Three steps per run, all in-process:
@@ -184,9 +275,14 @@ Three steps per run, all in-process:
 3. **Read** it once with a structured-output call, which returns the product
    fields and nothing else.
 
-Each user's own key is used when they have added one, along with the provider
-they picked with it, so they pay their model provider directly.
-`CREEP_LLM_API_KEY` is the fallback for a self-hosted install.
+Every key is one a user added in the app, and each target names the key it
+spends, so people pay their model provider directly and can keep separate keys
+for separate budgets. The provider travels with the key. There is deliberately
+no key in the environment: nothing to paste into a deployment, and nothing for
+an error page's config dump to leak. The key is put into the AI SDK's
+configuration for exactly the length of one call and removed again.
+
+Removing a key pauses the targets that were being crept with it.
 
 **It never runs a browser.** A shop that assembles its price in JavaScript will
 come back thin, and Creeper will record the run as failed rather than store an
@@ -235,9 +331,7 @@ Then set `CREEP_DRIVER=browser`. Nothing else in the application changes.
 | `CREEP_AGENT_ENDPOINT` | — | Where the `http` driver POSTs |
 | `CREEP_AGENT_TOKEN` | — | Sent as a bearer token |
 | `CREEP_AGENT_TIMEOUT` | `120` | Seconds to wait for a synchronous answer |
-| `CREEP_LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, `gemini`, `groq` or `openrouter` |
 | `CREEP_LLM_MODEL` | — | Blank takes the provider's own default |
-| `CREEP_LLM_API_KEY` | — | Fallback key, for when a user hasn't added their own |
 | `CREEP_LLM_MAX_CHARACTERS` | `12000` | How much page the model reads — the cost dial |
 | `CREEP_LLM_BUDGET` | `70` | Seconds for the whole driver, fetch and inference |
 | `CREEP_LLM_TIMEOUT` | `45` | Seconds for the model call alone |

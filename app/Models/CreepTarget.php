@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $user_id
+ * @property int|null $api_key_id The key this target spends. Null once the key it used was deleted.
  * @property CreepType $type
  * @property string $url
  * @property string|null $name
@@ -34,6 +35,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $user
+ * @property-read ApiKey|null $apiKey
  * @property-read Collection<int, CreepRun> $runs
  * @property-read Collection<int, ProductSnapshot> $snapshots
  * @property-read Collection<int, ChangelogSnapshot> $changelogSnapshots
@@ -42,7 +44,7 @@ use Illuminate\Support\Carbon;
  * @property-read ChangelogSnapshot|null $latestChangelogSnapshot
  * @property-read CreepRun|null $latestRun
  */
-#[Fillable(['type', 'url', 'name', 'status', 'frequency', 'notify_on_change', 'settings'])]
+#[Fillable(['type', 'api_key_id', 'url', 'name', 'status', 'frequency', 'notify_on_change', 'settings'])]
 class CreepTarget extends Model
 {
     /** @use HasFactory<CreepTargetFactory> */
@@ -75,6 +77,17 @@ class CreepTarget extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The key this target is crept with. Nullable: deleting a key leaves the
+     * targets that used it behind, waiting to be pointed at another one.
+     *
+     * @return BelongsTo<ApiKey, $this>
+     */
+    public function apiKey(): BelongsTo
+    {
+        return $this->belongsTo(ApiKey::class);
     }
 
     /** @return HasMany<CreepRun, $this> */

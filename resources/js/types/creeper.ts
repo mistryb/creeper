@@ -97,6 +97,10 @@ export type CreepTarget = {
     frequency: string;
     frequency_label: string;
     notify_on_change: boolean;
+    /** Which saved key pays for this target. Null once that key was deleted. */
+    api_key_id: string | null;
+    /** Only sent where the key is loaded, e.g. a target's own page. */
+    api_key_label?: string | null;
     consecutive_failures: number;
     last_crept_at: string | null;
     next_creep_at: string | null;
@@ -106,6 +110,19 @@ export type CreepTarget = {
     /** Changelog targets only. */
     latest_changelog_snapshot?: ChangelogSnapshot | null;
     latest_run?: CreepRun | null;
+};
+
+/** One key on the user's keyring, as the settings screen lists it. */
+export type ApiKeySummary = {
+    id: number;
+    name: string;
+    provider: string;
+    providerLabel: string;
+    /** The last four characters. The key itself never leaves the server. */
+    hint: string;
+    /** How many targets are being crept with it. */
+    targets: number;
+    created_at: string | null;
 };
 
 export type SelectOption = {

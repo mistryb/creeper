@@ -10,6 +10,7 @@ use App\Enums\CreepOutcome;
 use App\Enums\CreepProvider;
 use App\Enums\RunStatus;
 use App\Jobs\RunCreep;
+use App\Models\ApiKey;
 use App\Models\CreepRun;
 use App\Models\CreepTarget;
 use App\Models\User;
@@ -26,8 +27,6 @@ beforeEach(function () {
 
     config([
         'creeping.driver' => 'llm',
-        'creeping.drivers.llm.provider' => 'anthropic',
-        'creeping.drivers.llm.key' => 'sk-test-application-key-0000',
         'creeping.drivers.llm.model' => 'test-model',
         'creeping.drivers.llm.pin_address' => false,
     ]);
@@ -182,9 +181,9 @@ it('never writes the API key or the page HTML into the run payload', function ()
     ProductPageAgent::fake([extracted()]);
 
     $user = User::factory()->create();
-    $user->setCreepApiKey('sk-ant-api03-user-secret-abcd', CreepProvider::Anthropic);
+    $apiKey = ApiKey::factory()->for($user)->value('sk-ant-api03-user-secret-abcd')->create();
 
-    $target = CreepTarget::factory()->for($user)->create();
+    $target = CreepTarget::factory()->for($user)->for($apiKey)->create();
     $target->forceFill(['url' => 'https://shop.test/p/1'])->save();
 
     RunCreep::dispatchSync($target);
@@ -196,21 +195,20 @@ it('never writes the API key or the page HTML into the run payload', function ()
         ->and($payload)->not->toContain('<script');
 });
 
-it("spends the user's own key, and forgets it the moment it is done", function () {
+it("spends the target's own key, and forgets it the moment it is done", function () {
     Http::fake(['shop.test/*' => Http::response(productPage(), 200, ['Content-Type' => 'text/html'])]);
 
-    $user = User::factory()->create();
-    $user->setCreepApiKey('sk-ant-api03-user-secret-abcd', CreepProvider::Anthropic);
+    $apiKey = ApiKey::factory()->value('sk-ant-api03-user-secret-abcd')->create();
 
     $during = null;
 
-    ProductPageAgent::fake(function (string $prompt) use ($user, &$during): array {
-        $during = config("ai.providers.creep_user_{$user->id}");
+    ProductPageAgent::fake(function (string $prompt) use ($apiKey, &$during): array {
+        $during = config("ai.providers.creep_key_{$apiKey->id}");
 
         return extracted();
     });
 
-    $target = CreepTarget::factory()->for($user)->create();
+    $target = CreepTarget::factory()->for($apiKey->user)->for($apiKey)->create();
     $target->forceFill(['url' => 'https://shop.test/p/1'])->save();
 
     $run = CreepRun::factory()->running()->for($target, 'target')->create();
@@ -218,44 +216,23 @@ it("spends the user's own key, and forgets it the moment it is done", function (
     llmDriver()->creep($run);
 
     expect($during)->toBe(['driver' => 'anthropic', 'key' => 'sk-ant-api03-user-secret-abcd'])
-        ->and(config("ai.providers.creep_user_{$user->id}"))->toBeNull();
+        ->and(config("ai.providers.creep_key_{$apiKey->id}"))->toBeNull();
 });
 
-it('falls back to the configured key when the user has none', function () {
+it('sends the key to the provider it was saved against', function () {
     Http::fake(['shop.test/*' => Http::response(productPage(), 200, ['Content-Type' => 'text/html'])]);
+
+    $apiKey = ApiKey::factory()->provider(CreepProvider::OpenRouter)->create();
 
     $during = null;
 
-    ProductPageAgent::fake(function (string $prompt) use (&$during): array {
-        $during = config('ai.providers.creep_app');
+    ProductPageAgent::fake(function (string $prompt) use ($apiKey, &$during): array {
+        $during = config("ai.providers.creep_key_{$apiKey->id}");
 
         return extracted();
     });
 
-    $run = CreepRun::factory()->running()->create();
-    $run->target->forceFill(['url' => 'https://shop.test/p/1'])->save();
-
-    llmDriver()->creep($run->fresh());
-
-    expect($during)->toBe(['driver' => 'anthropic', 'key' => 'sk-test-application-key-0000'])
-        ->and(config('ai.providers.creep_app'))->toBeNull();
-});
-
-it('sends the key to the provider the user picked, not the configured one', function () {
-    Http::fake(['shop.test/*' => Http::response(productPage(), 200, ['Content-Type' => 'text/html'])]);
-
-    $user = User::factory()->create();
-    $user->setCreepApiKey('sk-or-v1-user-secret-wxyz', CreepProvider::OpenRouter);
-
-    $during = null;
-
-    ProductPageAgent::fake(function (string $prompt) use ($user, &$during): array {
-        $during = config("ai.providers.creep_user_{$user->id}");
-
-        return extracted();
-    });
-
-    $target = CreepTarget::factory()->for($user)->create();
+    $target = CreepTarget::factory()->for($apiKey->user)->for($apiKey)->create();
     $target->forceFill(['url' => 'https://shop.test/p/1'])->save();
 
     $run = CreepRun::factory()->running()->for($target, 'target')->create();
@@ -265,39 +242,41 @@ it('sends the key to the provider the user picked, not the configured one', func
     expect($during['driver'])->toBe('openrouter');
 });
 
-it('registers the configured provider when the user has no key of their own', function () {
-    config(['creeping.drivers.llm.provider' => 'openrouter']);
-
+it('spends whichever of a user\'s keys the target was given', function () {
     Http::fake(['shop.test/*' => Http::response(productPage(), 200, ['Content-Type' => 'text/html'])]);
+
+    $user = User::factory()->create();
+    ApiKey::factory()->for($user)->value('sk-ant-api03-the-other-key-0000')->create();
+    $chosen = ApiKey::factory()->for($user)->value('sk-ant-api03-the-chosen-key-zzzz')->create();
 
     $during = null;
 
-    ProductPageAgent::fake(function (string $prompt) use (&$during): array {
-        $during = config('ai.providers.creep_app');
+    ProductPageAgent::fake(function (string $prompt) use ($chosen, &$during): array {
+        $during = config("ai.providers.creep_key_{$chosen->id}");
 
         return extracted();
     });
 
-    $run = CreepRun::factory()->running()->create();
-    $run->target->forceFill(['url' => 'https://shop.test/p/1'])->save();
+    $target = CreepTarget::factory()->for($user)->for($chosen)->create();
+    $target->forceFill(['url' => 'https://shop.test/p/1'])->save();
 
-    llmDriver()->creep($run->fresh());
+    llmDriver()->creep(CreepRun::factory()->running()->for($target, 'target')->create());
 
-    expect($during)->toBe(['driver' => 'openrouter', 'key' => 'sk-test-application-key-0000'])
-        ->and(config('ai.providers.creep_app'))->toBeNull();
+    expect($during['key'])->toBe('sk-ant-api03-the-chosen-key-zzzz');
 });
 
-it('refuses to run with no key configured anywhere', function () {
-    config(['creeping.drivers.llm.key' => null]);
-
-    Http::fake(['shop.test/*' => Http::response(productPage(), 200, ['Content-Type' => 'text/html'])]);
+it('refuses to run a target whose key has been removed, without fetching the page', function () {
     ProductPageAgent::fake([extracted()]);
 
-    $run = CreepRun::factory()->running()->create();
-    $run->target->forceFill(['url' => 'https://shop.test/p/1'])->save();
+    $target = CreepTarget::factory()->keyless()->create();
+    $target->forceFill(['url' => 'https://shop.test/p/1'])->save();
 
-    llmDriver()->creep($run->fresh());
-})->throws(RuntimeException::class, 'No model API key is configured');
+    $result = llmDriver()->creep(CreepRun::factory()->running()->for($target, 'target')->create());
+
+    // No Http::fake at all, so a fetch would have been a stray request.
+    expect($result->outcome)->toBe(CreepOutcome::Failed)
+        ->and($result->error)->toContain('no API key');
+});
 
 it('will not follow a redirect to a private address', function () {
     Http::fake([
@@ -499,7 +478,7 @@ it('gives up when the provider says the key is no good', function () {
     $result = llmDriver()->creep($run->fresh());
 
     expect($result->outcome)->toBe(CreepOutcome::Failed)
-        ->and($result->error)->toContain('rejected the API key');
+        ->and($result->error)->toContain('rejected the key this target uses');
 });
 
 it('gives up when the provider is out of credit', function () {

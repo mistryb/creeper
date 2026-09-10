@@ -28,6 +28,10 @@ class CreepTargetResource extends JsonResource
             'frequency' => $this->frequency->value,
             'frequency_label' => $this->frequency->label(),
             'notify_on_change' => $this->notify_on_change,
+            // Which key pays for this target. Null once that key was deleted,
+            // which is the settings form's cue to ask for another.
+            'api_key_id' => $this->api_key_id === null ? null : (string) $this->api_key_id,
+            'api_key_label' => $this->whenLoaded('apiKey', fn (): ?string => $this->apiKey?->label()),
             'consecutive_failures' => $this->consecutive_failures,
             'last_crept_at' => $this->last_crept_at?->toIso8601String(),
             'next_creep_at' => $this->next_creep_at?->toIso8601String(),

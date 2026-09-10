@@ -8,9 +8,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | The driver that actually goes and does the creeping. "llm" reads the page
-    | here, with a model, and needs an API key to do it. "http" hands the URL
-    | to your own creeping agent. "fake" returns plausible product data without
-    | leaving the machine, which is how to look around without a key.
+    | here, with a model, using the key the target was given in the app. "http"
+    | hands the URL to your own creeping agent. "fake" returns plausible
+    | product data without leaving the machine, which is how to look around
+    | without a key.
     |
     */
 
@@ -31,16 +32,16 @@ return [
         'llm' => [
 
             /*
-             * Where to send a key nobody has personalised. Users who add their
-             * own key in settings pick their own provider alongside it, and
-             * that always wins; this pair is the fallback a self-hosted
-             * install runs on. Leave the model empty to take whatever the
-             * provider's own default is, rather than pinning a name that will
-             * age badly.
+             * Keys are not configuration. Every key lives on a user's keyring
+             * in the app, and each target says which one it spends — there is
+             * deliberately nothing to set here, so a key can never leak
+             * through an environment file or an error page's config dump.
+             *
+             * The provider travels with the key. Leave the model empty to take
+             * whatever the provider's own default is, rather than pinning a
+             * name that will age badly.
              */
-            'provider' => env('CREEP_LLM_PROVIDER', 'anthropic'),
             'model' => env('CREEP_LLM_MODEL'),
-            'key' => env('CREEP_LLM_API_KEY'),
 
             /*
              * The whole driver — fetching and inference together — has to

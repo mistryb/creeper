@@ -4,6 +4,7 @@ use App\Enums\CreepFrequency;
 use App\Enums\CreepType;
 use App\Enums\TargetStatus;
 use App\Jobs\RunCreep;
+use App\Models\ApiKey;
 use App\Models\CreepTarget;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
@@ -29,12 +30,14 @@ it('creates a target and starts creeping it immediately', function () {
     Queue::fake();
 
     $user = User::factory()->create();
+    $key = ApiKey::factory()->for($user)->create();
 
     $this->actingAs($user)
         ->post(route('creep-targets.store'), [
             'type' => CreepType::Product->value,
             'url' => 'https://example.com/products/kettle',
             'name' => 'Kettle',
+            'api_key_id' => $key->id,
             'frequency' => CreepFrequency::Daily->value,
             'notify_on_change' => true,
         ])
@@ -44,6 +47,7 @@ it('creates a target and starts creeping it immediately', function () {
     $target = $user->creepTargets()->sole();
 
     expect($target->url)->toBe('https://example.com/products/kettle')
+        ->and($target->api_key_id)->toBe($key->id)
         ->and($target->status)->toBe(TargetStatus::Active)
         ->and($target->frequency)->toBe(CreepFrequency::Daily)
         ->and($target->next_creep_at)->not->toBeNull();
@@ -76,6 +80,7 @@ it('lets two users creep the same URL', function () {
         ->post(route('creep-targets.store'), [
             'type' => CreepType::Product->value,
             'url' => $url,
+            'api_key_id' => ApiKey::factory()->for($user)->create()->id,
             'frequency' => CreepFrequency::Daily->value,
         ])
         ->assertSessionHasNoErrors();
@@ -200,6 +205,7 @@ it('defaults a new target to no notifications when the box is unticked', functio
         ->post(route('creep-targets.store'), [
             'type' => CreepType::Product->value,
             'url' => 'https://example.com/products/quiet',
+            'api_key_id' => ApiKey::factory()->for($user)->create()->id,
             'frequency' => 'daily',
         ])
         ->assertSessionHasNoErrors();
@@ -216,6 +222,7 @@ it('lets the user pick what kind of creeping to do', function () {
         ->post(route('creep-targets.store'), [
             'type' => CreepType::Changelog->value,
             'url' => 'https://example.com/changelog',
+            'api_key_id' => ApiKey::factory()->for($user)->create()->id,
             'frequency' => CreepFrequency::Daily->value,
         ])
         ->assertSessionHasNoErrors();
@@ -263,4 +270,97 @@ it('will not let a target change what kind of creeping it is', function () {
     // Readings are filed in a table per type, so a target that switched would
     // strand everything already found.
     expect($target->fresh()->type)->toBe(CreepType::Product);
+});
+
+it('will not start creeping without a key to pay for it', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('creep-targets.store'), [
+            'type' => CreepType::Product->value,
+            'url' => 'https://example.com/products/kettle',
+            'frequency' => CreepFrequency::Daily->value,
+        ])
+        ->assertSessionHasErrors('api_key_id');
+
+    expect($user->creepTargets()->count())->toBe(0);
+    Queue::assertNothingPushed();
+});
+
+it('will not spend somebody else\'s key', function () {
+    $user = User::factory()->create();
+    $theirs = ApiKey::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('creep-targets.store'), [
+            'type' => CreepType::Product->value,
+            'url' => 'https://example.com/products/kettle',
+            'api_key_id' => $theirs->id,
+            'frequency' => CreepFrequency::Daily->value,
+        ])
+        ->assertSessionHasErrors('api_key_id');
+
+    expect($user->creepTargets()->count())->toBe(0);
+});
+
+it('offers the user their keys on the new-target form', function () {
+    $user = User::factory()->create();
+    ApiKey::factory()->for($user)->create(['name' => 'Personal']);
+    ApiKey::factory()->create(['name' => 'Somebody else\'s']);
+
+    $this->actingAs($user)
+        ->get(route('creep-targets.create'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('apiKeys', 1)
+            ->where('apiKeys.0.label', fn (string $label): bool => str_contains($label, 'Personal'))
+        );
+});
+
+it('moves a target onto another key', function () {
+    $user = User::factory()->create();
+    $target = CreepTarget::factory()->for($user)->create();
+    $other = ApiKey::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->put(route('creep-targets.update', $target), [
+            'url' => $target->url,
+            'api_key_id' => $other->id,
+            'frequency' => $target->frequency->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($target->fresh()->api_key_id)->toBe($other->id);
+});
+
+it('leaves a target on its key when the form does not mention one', function () {
+    $user = User::factory()->create();
+    $target = CreepTarget::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->put(route('creep-targets.update', $target), [
+            'url' => $target->url,
+            'frequency' => $target->frequency->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($target->fresh()->api_key_id)->toBe($target->api_key_id);
+});
+
+it('shows a target the keys it could be moved onto, and the one it is on', function () {
+    $user = User::factory()->create();
+    $key = ApiKey::factory()->for($user)->create(['name' => 'Personal']);
+    $target = CreepTarget::factory()->for($user)->for($key)->create();
+    ApiKey::factory()->create(['name' => 'Somebody else\'s']);
+
+    $this->actingAs($user)
+        ->get(route('creep-targets.show', $target))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('target.data.api_key_id', (string) $key->id)
+            ->where('target.data.api_key_label', fn (string $label): bool => str_contains($label, 'Personal'))
+            ->has('apiKeys', 1)
+        );
 });

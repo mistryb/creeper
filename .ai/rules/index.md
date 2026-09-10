@@ -13,3 +13,4 @@ Before planning or editing, find the row whose globs match the file's path and r
 | tests/Feature/*.php | .ai/rules/feature.md |
 | app/Http/Controllers/CreepTargetPauseController.php,app/Http/Controllers/CreepTargetController.php,app/Http/Controllers/CreepRunController.php | .ai/rules/http-controllers.md |
 | resources/js/** | .ai/rules/js.md |
+| app/Models/ApiKey.php,app/Http/Controllers/Settings/ApiKeyController.php | .ai/rules/settings.md |

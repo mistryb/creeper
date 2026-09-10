@@ -52,13 +52,13 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
                                     separated — ask me who, and put mine
                                     first. Nobody else can get an account
      CREEP_DRIVER=llm
-     CREEP_LLM_PROVIDER=anthropic
-     CREEP_LLM_API_KEY=...          ask me for this
      DB_QUEUE_RETRY_AFTER=330       leave this above the job timeout, or a
                                     slow page is crept twice and billed twice
      MAIL_...                       signing in means receiving a six digit
                                     code, so mail has to work — ask me for
                                     the credentials
+   There is deliberately no model API key here: keys are added inside the
+   app, under Settings → API keys, and each target picks the one it spends.
    Use CREEP_DRIVER=fake instead if I tell you I want to look around before
    paying for a model.
 
@@ -67,7 +67,9 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
    in at /login with my email address and the code it sends me.
 
 7. Tell me that adding somebody later means adding their address to
-   AUTHORIZED_EMAILS and deploying again, and how to do that.`;
+   AUTHORIZED_EMAILS and deploying again, and how to do that. Tell me too
+   that the first thing to do once I am signed in is add a model API key
+   under Settings → API keys, because nothing can be crept without one.`;
 
 /** One thing the agent does, numbered the way the landing page numbers setup. */
 function AgentStep({

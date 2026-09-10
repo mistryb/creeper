@@ -66,9 +66,9 @@ class HttpCreepDriver implements CreepDriver
             'url' => $run->target->url,
             'settings' => $run->target->settings ?? [],
             'callback_url' => $this->callbackUrl($run),
-            // The user's own model key. The agent spends it on their behalf;
-            // we never hold a balance and never mark it up.
-            ...array_filter(['api_key' => $run->target->user->creep_api_key]),
+            // The key this target was given. The agent spends it on the
+            // user's behalf; we never hold a balance and never mark it up.
+            ...array_filter(['api_key' => $run->target->apiKey?->key]),
         ]);
 
         if ($response->accepted()) {

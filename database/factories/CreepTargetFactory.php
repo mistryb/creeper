@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\CreepFrequency;
 use App\Enums\CreepType;
 use App\Enums\TargetStatus;
+use App\Models\ApiKey;
 use App\Models\CreepTarget;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -24,6 +25,11 @@ class CreepTargetFactory extends Factory
 
         return [
             'user_id' => User::factory(),
+            // Every target is crept with one of its owner's keys, so a target
+            // that made itself up needs a key of its own to be usable.
+            'api_key_id' => fn (array $attributes): int => ApiKey::factory()->create([
+                'user_id' => $attributes['user_id'],
+            ])->id,
             'type' => CreepType::Product,
             'url' => 'https://'.fake()->unique()->domainName().'/products/'.fake()->slug(),
             'name' => fake()->words(3, true),
@@ -35,6 +41,15 @@ class CreepTargetFactory extends Factory
             'next_creep_at' => $frequency->nextRunAfter(Carbon::now()),
             'settings' => null,
         ];
+    }
+
+    /**
+     * A target whose key has been deleted, and which therefore cannot be
+     * crept until somebody gives it another.
+     */
+    public function keyless(): static
+    {
+        return $this->state(fn (): array => ['api_key_id' => null]);
     }
 
     /**

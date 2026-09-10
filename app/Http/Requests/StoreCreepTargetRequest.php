@@ -24,6 +24,10 @@ class StoreCreepTargetRequest extends FormRequest
             // filed in a table per type, so switching would strand them.
             'type' => ['required', Rule::enum(CreepType::class)],
             ...$this->creepTargetRules($this->user()->id),
+
+            // Creeping costs money, and Creeper has no key of its own to spend:
+            // a new target says which of the user's keys it bills, up front.
+            'api_key_id' => ['required', ...$this->apiKeyRules($this->user()->id)],
         ];
     }
 

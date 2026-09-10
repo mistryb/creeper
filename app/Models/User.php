@@ -21,16 +21,14 @@ use Illuminate\Support\Str;
  * @property Carbon|null $email_verified_at
  * @property string|null $pending_email An address awaiting confirmation by code.
  * @property string|null $password Retired. Sign-in is by one-time code.
- * @property string|null $creep_api_key
- * @property string|null $creep_api_key_hint
- * @property CreepProvider|null $creep_api_provider
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, CreepTarget> $creepTargets
+ * @property-read Collection<int, ApiKey> $apiKeys
  */
 #[Fillable(['name', 'email'])]
-#[Hidden(['password', 'creep_api_key', 'remember_token'])]
+#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -45,8 +43,6 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'creep_api_key' => 'encrypted',
-            'creep_api_provider' => CreepProvider::class,
         ];
     }
 
@@ -111,33 +107,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Whether this user has a model API key on file for the creeping agent.
+     * The keys this user has on file, newest last so the list reads in the
+     * order they were added.
+     *
+     * @return HasMany<ApiKey, $this>
      */
-    public function hasCreepApiKey(): bool
+    public function apiKeys(): HasMany
     {
-        return filled($this->creep_api_key);
+        return $this->hasMany(ApiKey::class)->orderBy('id');
     }
 
     /**
-     * Store a model API key and the provider it belongs to, keeping the last
-     * four characters in the clear so the settings screen can identify it
-     * without decrypting anything.
+     * Store a model API key, keeping the last four characters in the clear so
+     * the settings screen can identify it without decrypting anything.
      */
-    public function setCreepApiKey(#[\SensitiveParameter] string $key, CreepProvider $provider): void
+    public function addApiKey(string $name, CreepProvider $provider, #[\SensitiveParameter] string $key): ApiKey
     {
-        $this->forceFill([
-            'creep_api_key' => $key,
-            'creep_api_key_hint' => mb_substr($key, -4),
-            'creep_api_provider' => $provider,
-        ])->save();
-    }
-
-    public function forgetCreepApiKey(): void
-    {
-        $this->forceFill([
-            'creep_api_key' => null,
-            'creep_api_key_hint' => null,
-            'creep_api_provider' => null,
-        ])->save();
+        return $this->apiKeys()->create([
+            'name' => $name,
+            'provider' => $provider,
+            'key' => $key,
+            'hint' => mb_substr($key, -4),
+        ]);
     }
 }

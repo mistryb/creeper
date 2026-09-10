@@ -10,8 +10,8 @@ use App\Creeping\Exceptions\PageFetchFailed;
 use App\Creeping\Fetching\PageDigest;
 use App\Creeping\Fetching\PageFetcher;
 use App\Enums\CreepProvider;
+use App\Models\ApiKey;
 use App\Models\CreepRun;
-use App\Models\User;
 use Illuminate\Http\Client\RequestException;
 use Laravel\Ai\Ai;
 use Laravel\Ai\Exceptions\InsufficientCreditsException;
@@ -29,6 +29,10 @@ use RuntimeException;
  * Which model is asked what, and how much of the page it is shown, comes from
  * the target's {@see CreepInstructions}. This driver only knows about pages,
  * keys and clocks.
+ *
+ * The key is always one the user added in the app and picked for this target.
+ * There is no key in the environment to fall back on, so a target without one
+ * cannot be crept until somebody chooses a key for it.
  *
  * The whole thing is bounded by a wall-clock budget, because a synchronous run
  * that outlives its queue reservation would be picked up and crept a second
@@ -61,6 +65,16 @@ final class LlmCreepDriver implements CreepDriver
 
         $instructions = $run->target->type->instructions();
 
+        $apiKey = $run->target->apiKey;
+
+        // Checked before the page is fetched: without a key there is nothing
+        // to read the page with, so fetching it would only waste the request.
+        if ($apiKey === null) {
+            return CreepResult::failed(
+                'This target has no API key. Choose one in the target\'s settings, or add one under Settings → API keys.'
+            );
+        }
+
         try {
             $page = $this->fetcher->fetch($run->target->url);
         } catch (PageFetchFailed $exception) {
@@ -83,7 +97,7 @@ final class LlmCreepDriver implements CreepDriver
             return CreepResult::failed($instructions->unreadable($page->url));
         }
 
-        [$instance, $provider, $model] = $this->provider($run->target->user);
+        [$instance, $provider, $model] = $this->provider($apiKey);
 
         $remaining = min(
             (int) ($this->config['timeout'] ?? 45),
@@ -130,38 +144,21 @@ final class LlmCreepDriver implements CreepDriver
     /**
      * Register the provider this run should bill, and say which model to use.
      *
-     * The user's own key is preferred — they pay their provider directly — and
-     * the configured key is the fallback a self-hosted install runs on.
+     * The key is the user's own — they pay their provider directly, and
+     * Creeper never holds a balance.
      *
      * @return array{0: string, 1: CreepProvider, 2: string|null}
      */
-    private function provider(User $user): array
+    private function provider(ApiKey $apiKey): array
     {
         $model = $this->config['model'] ?? null;
         $model = is_string($model) && $model !== '' ? $model : null;
 
-        if ($user->hasCreepApiKey() && $user->creep_api_provider instanceof CreepProvider) {
-            return [
-                $this->register("creep_user_{$user->id}", $user->creep_api_provider, (string) $user->creep_api_key),
-                $user->creep_api_provider,
-                $model,
-            ];
-        }
-
-        $key = $this->config['key'] ?? null;
-
-        if (! is_string($key) || $key === '') {
-            // A misconfigured install is not a dead target. Throwing keeps
-            // this out of the target's failure streak, the same way a missing
-            // agent endpoint does for the http driver.
-            throw new RuntimeException(
-                'No model API key is configured for the llm driver. Set CREEP_LLM_API_KEY, or add a key in settings.'
-            );
-        }
-
-        $provider = CreepProvider::tryFrom((string) ($this->config['provider'] ?? '')) ?? CreepProvider::Anthropic;
-
-        return [$this->register('creep_app', $provider, $key), $provider, $model];
+        return [
+            $this->register("creep_key_{$apiKey->id}", $apiKey->provider, $apiKey->key),
+            $apiKey->provider,
+            $model,
+        ];
     }
 
     /**
@@ -212,7 +209,7 @@ final class LlmCreepDriver implements CreepDriver
 
         if ($status === 401 || $status === 403) {
             return CreepResult::failed(
-                "{$provider->label()} rejected the API key on file. Check it in settings — retrying the same key will not help."
+                "{$provider->label()} rejected the key this target uses. Check it under Settings → API keys — retrying the same key will not help."
             );
         }
 

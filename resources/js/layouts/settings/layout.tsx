@@ -3,7 +3,7 @@ import type { PropsWithChildren } from 'react';
 import { Page, SectionHeading } from '@/components/ds';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
-import { edit as editApiKey } from '@/routes/api-key';
+import { index as apiKeys } from '@/routes/api-keys';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
@@ -11,7 +11,7 @@ import type { NavItem } from '@/types';
 const navItems: NavItem[] = [
     { title: 'Profile', href: edit(), icon: null },
     { title: 'Security', href: editSecurity(), icon: null },
-    { title: 'API key', href: editApiKey(), icon: null },
+    { title: 'API keys', href: apiKeys(), icon: null },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
@@ -19,7 +19,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
     return (
         <Page>
-            <SectionHeading title="Settings" note="Your account, your key" />
+            <SectionHeading title="Settings" note="Your account, your keys" />
 
             <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
                 {/*
