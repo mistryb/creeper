@@ -3,6 +3,7 @@
 namespace App\Concerns;
 
 use App\Models\User;
+use App\Rules\AuthorizedEmail;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
@@ -34,6 +35,10 @@ trait ProfileValidationRules
     /**
      * Get the validation rules used to validate user emails.
      *
+     * An address is the only way into an account, so moving one off the
+     * install's allow list would lock the account out at the next sign-in.
+     * The rule refuses the change instead.
+     *
      * @return array<int, ValidationRule|array<mixed>|string>
      */
     protected function emailRules(?int $userId = null): array
@@ -43,6 +48,7 @@ trait ProfileValidationRules
             'string',
             'email',
             'max:255',
+            new AuthorizedEmail,
             $userId === null
                 ? Rule::unique(User::class)
                 : Rule::unique(User::class)->ignore($userId),

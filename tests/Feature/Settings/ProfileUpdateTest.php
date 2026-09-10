@@ -165,3 +165,43 @@ it('refuses to delete the account on the wrong address', function () {
 
     expect($user->fresh())->not->toBeNull();
 });
+
+/*
+ * The address is the only way into an account, so moving one off the install's
+ * allow list would be a locked door at the next sign-in. Unlike the sign-in
+ * form, this can say so: the person reading it is already signed in.
+ */
+it('refuses to move an account to an address the install does not admit', function () {
+    config(['auth.authorized_emails' => 'jane@example.com']);
+
+    $user = User::factory()->create(['email' => 'jane@example.com']);
+
+    $this->actingAs($user)
+        ->from(route('profile.edit'))
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'stranger@example.com',
+        ])
+        ->assertSessionHasErrors('email');
+
+    expect($user->fresh()->pending_email)->toBeNull();
+
+    Notification::assertNothingSent();
+});
+
+it('allows a move between two addresses the install admits', function () {
+    config(['auth.authorized_emails' => 'jane@example.com, jane@work.example.com']);
+
+    $user = User::factory()->create(['email' => 'jane@example.com']);
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'jane@work.example.com',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($user->fresh()->pending_email)->toBe('jane@work.example.com');
+
+    Notification::assertSentOnDemandTimes(LoginCodeNotification::class, 1);
+});

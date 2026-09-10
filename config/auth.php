@@ -75,6 +75,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Authorized Addresses
+    |--------------------------------------------------------------------------
+    |
+    | Who is allowed an account on this install. Signing in and signing up are
+    | the same act here, so leaving this empty means anybody who can read mail
+    | at an address can have an account — right for a public install, wrong
+    | for a private one.
+    |
+    | List the addresses you want, separated by commas, and nobody else gets
+    | in. Adding somebody later is a change to this variable and a redeploy.
+    |
+    */
+
+    'authorized_emails' => env('AUTHORIZED_EMAILS', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Resetting Passwords
     |--------------------------------------------------------------------------
     |

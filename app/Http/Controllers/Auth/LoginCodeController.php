@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Auth\AuthorizedEmails;
 use App\Auth\LoginCodes;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RequestLoginCodeRequest;
@@ -26,13 +27,21 @@ use Inertia\Response;
  *
  * The account is created on verification, never on request. Otherwise anyone
  * could fill the users table with addresses they do not control.
+ *
+ * An install that names addresses in `AUTHORIZED_EMAILS` lets nobody else in,
+ * and says nothing about it: an unlisted address is answered exactly like a
+ * listed one, and simply never receives a code. Saying "you are not on the
+ * list" would hand the list to whoever asked for it.
  */
 class LoginCodeController extends Controller
 {
     /** Where the address awaiting a code is remembered between requests. */
     protected const PENDING_KEY = 'login.email';
 
-    public function __construct(protected LoginCodes $codes) {}
+    public function __construct(
+        protected LoginCodes $codes,
+        protected AuthorizedEmails $authorized,
+    ) {}
 
     /**
      * Ask for an address.
@@ -52,8 +61,12 @@ class LoginCodeController extends Controller
     {
         $email = $request->email();
 
-        Notification::route('mail', $email)
-            ->notify(new LoginCodeNotification($this->codes->issue($email)));
+        // Unlisted addresses fall through to the same redirect with the same
+        // message, having been sent nothing.
+        if ($this->authorized->allows($email)) {
+            Notification::route('mail', $email)
+                ->notify(new LoginCodeNotification($this->codes->issue($email)));
+        }
 
         /*
          * Held in the session only so the next screen can prefill and offer a
@@ -87,11 +100,12 @@ class LoginCodeController extends Controller
     {
         $email = $request->email();
 
-        if (! $this->codes->verify($email, $request->code())) {
+        if (! $this->authorized->allows($email) || ! $this->codes->verify($email, $request->code())) {
             /*
              * One message for every kind of failure — wrong, expired, spent,
-             * or never issued. Saying which would tell an attacker whether an
-             * address has a code outstanding.
+             * never issued, or an address this install does not admit. Saying
+             * which would tell an attacker whether an address has a code
+             * outstanding, or whether it is one this install knows.
              */
             throw ValidationException::withMessages([
                 'code' => __('That code is not valid. Ask for a new one.'),
