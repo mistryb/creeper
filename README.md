@@ -6,9 +6,9 @@ Right now that means **product creeping**: Creeper watches a product page,
 records what it finds every time it looks, and tells you when the price moves
 or the thing comes back in stock.
 
-Creeper is an app you run on your own box. There are no plans, no limits and
-no billing — you bring a model API key and it costs you whatever your provider
-charges.
+Creeper is an app you run yourself — on your own box, or on Laravel Cloud.
+There are no plans, no limits and no billing: you bring a model API key and it
+costs you whatever your provider charges.
 
 ---
 

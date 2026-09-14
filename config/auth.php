@@ -92,6 +92,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Signing In Locally
+    |--------------------------------------------------------------------------
+    |
+    | On a local checkout there is nobody to keep out, and waiting on an
+    | emailed code to look at your own machine is friction with nothing behind
+    | it. So the account below is created on the first request and signed in
+    | for you. This is ignored outside the "local" environment.
+    |
+    | Leave the address empty and a restricted install signs in as the first
+    | address it allows, while an unrestricted one reuses the account already
+    | in the database. Set LOCAL_AUTO_SIGN_IN=false to type a code instead.
+    |
+    */
+
+    'local_auto_sign_in' => (bool) env('LOCAL_AUTO_SIGN_IN', true),
+
+    'local_user_email' => env('LOCAL_USER_EMAIL'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Resetting Passwords
     |--------------------------------------------------------------------------
     |
