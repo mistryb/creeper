@@ -5,10 +5,9 @@ namespace App\Creeping\Fetching;
 /**
  * What a digest keeps, for one kind of page.
  *
- * A shop page hides its truth in schema.org markup and a handful of meta
- * tags; a changelog puts it in plain prose under version headings. The two
- * want different parts of the same document, and — because every character
- * kept is a character paid for — different budgets.
+ * A watched page and a business's homepage want different parts of the same
+ * document, and — because every character kept is a character paid for —
+ * different budgets.
  *
  * @see PageDigest::fromHtml()
  */
@@ -32,56 +31,54 @@ final readonly class DigestProfile
     ) {}
 
     /**
-     * A single product page.
+     * A competitor's page, read for whatever the user asked to watch.
      *
-     * Structured data first: a shop that publishes a Product node has told us
-     * the price on purpose, and it is worth more than any amount of prose.
+     * The page could be pricing, a changelog, a homepage or anything else, so
+     * this keeps the schema.org types that describe what a company sells and
+     * ships, and gives most of the budget to the visible text. `header`
+     * survives the cull because a release or a plan often carries its name
+     * and date in one.
      */
-    public static function product(): self
+    public static function page(): self
     {
         return new self(
             noise: [
                 'script', 'style', 'noscript', 'svg', 'iframe', 'template',
-                'nav', 'footer', 'header', 'aside', 'form', 'button', 'select',
+                'nav', 'footer', 'aside', 'form', 'select',
             ],
-            structuredTypes: ['product', 'offer', 'aggregateoffer', 'aggregaterating'],
+            structuredTypes: [
+                'product', 'offer', 'aggregateoffer', 'aggregaterating', 'softwareapplication',
+                'service', 'organization', 'webpage',
+            ],
             meta: [
-                'og:title', 'og:description', 'og:image', 'og:url', 'og:site_name',
+                'og:title', 'og:description', 'og:url', 'og:site_name', 'description',
                 'product:price:amount', 'product:price:currency', 'product:availability',
-                'product:brand', 'product:retailer_item_id',
-                'twitter:title', 'twitter:image', 'description',
+                'twitter:title', 'twitter:description',
             ],
-            itemProps: [
-                'name', 'price', 'priceCurrency', 'availability', 'sku', 'brand',
-                'ratingValue', 'reviewCount', 'image',
-            ],
-            structuredBudget: 8000,
-            metaBudget: 2000,
+            itemProps: ['name', 'price', 'priceCurrency', 'availability', 'description'],
+            structuredBudget: 4000,
+            metaBudget: 1500,
         );
     }
 
     /**
-     * A release or changelog page.
+     * A business's own website, read to understand what it sells and to whom.
      *
-     * Nobody marks a changelog up in schema.org, so JSON-LD is skipped
-     * outright and nearly the whole budget goes to the text — which is where
-     * the versions, dates and feature descriptions actually are.
-     *
-     * `header` survives the cull here: a release entry very often wraps its
-     * version and date in one, and losing those would leave a list of
-     * features belonging to nothing.
+     * Organisation and product markup is kept because a site that publishes
+     * it has described itself on purpose; the rest of the budget goes to the
+     * visible text, where the pitch actually is.
      */
-    public static function changelog(): self
+    public static function homepage(): self
     {
         return new self(
             noise: [
                 'script', 'style', 'noscript', 'svg', 'iframe', 'template',
                 'nav', 'footer', 'aside', 'form', 'button', 'select',
             ],
-            structuredTypes: [],
-            meta: ['og:title', 'og:description', 'og:url', 'og:site_name', 'description'],
-            itemProps: [],
-            structuredBudget: 0,
+            structuredTypes: ['organization', 'localbusiness', 'corporation', 'product', 'offer', 'service', 'website'],
+            meta: ['og:title', 'og:description', 'og:url', 'og:site_name', 'description', 'twitter:title', 'twitter:description'],
+            itemProps: ['name', 'description', 'price', 'priceCurrency'],
+            structuredBudget: 3000,
             metaBudget: 1000,
         );
     }

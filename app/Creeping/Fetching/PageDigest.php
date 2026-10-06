@@ -46,12 +46,12 @@ final readonly class PageDigest
     /**
      * Reduce a page to its digest.
      *
-     * The profile decides what is worth keeping; a product page is assumed
-     * when none is given, because that is the only kind of page there was.
+     * The profile decides what is worth keeping; a watched page is assumed
+     * when none is given.
      */
     public static function fromHtml(string $html, int $maxCharacters, ?DigestProfile $profile = null): self
     {
-        $profile ??= DigestProfile::product();
+        $profile ??= DigestProfile::page();
 
         $document = self::parse($html);
 

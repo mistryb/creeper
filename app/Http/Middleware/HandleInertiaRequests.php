@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Business;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,7 +42,31 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'businessChooser' => fn (): array => $this->businessChooser($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * Everything the sidebar's business chooser needs: the business it shows,
+     * and the ones it can switch to.
+     *
+     * @return array{current: array{id: int, name: string}|null, all: list<array{id: int, name: string}>}
+     */
+    private function businessChooser(Request $request): array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return ['current' => null, 'all' => []];
+        }
+
+        $all = $user->businesses()->get(['id', 'user_id', 'name']);
+        $current = $all->firstWhere('id', $user->current_business_id) ?? $all->first();
+
+        return [
+            'current' => $current?->only(['id', 'name']),
+            'all' => $all->map(fn (Business $business): array => $business->only(['id', 'name']))->values()->all(),
         ];
     }
 }

@@ -1,33 +1,33 @@
 import { Form } from '@inertiajs/react';
 import { Pause, Play } from 'lucide-react';
-import CreepTargetPauseController from '@/actions/App/Http/Controllers/CreepTargetPauseController';
+import WatchedPagePauseController from '@/actions/App/Http/Controllers/WatchedPagePauseController';
 import { Button } from '@/components/ui/button';
-import type { CreepTarget } from '@/types';
+import type { WatchedPage } from '@/types';
 
 /**
  * Pausing is the alternative to deleting: the schedule stops, everything
  * already found stays. One control covers both directions, because a paused
- * target and a parked one are both resumed the same way.
+ * watched page and a parked one are both resumed the same way.
  */
 export function PauseButton({
-    target,
+    watchedPage,
     size = 'default',
     variant = 'secondary',
     compact = false,
 }: {
-    target: CreepTarget;
+    watchedPage: WatchedPage;
     size?: 'default' | 'sm' | 'icon';
     variant?: 'secondary' | 'outline' | 'ghost';
     /** Icon only, for table rows where the label would crowd the row. */
     compact?: boolean;
 }) {
-    const isRunning = target.status === 'active';
+    const isRunning = watchedPage.status === 'active';
     const label = isRunning ? 'Pause creeping' : 'Resume creeping';
     const Icon = isRunning ? Pause : Play;
 
     const action = isRunning
-        ? CreepTargetPauseController.store.form(target.id)
-        : CreepTargetPauseController.destroy.form(target.id);
+        ? WatchedPagePauseController.store.form(watchedPage.id)
+        : WatchedPagePauseController.destroy.form(watchedPage.id);
 
     return (
         <Form {...action} options={{ preserveScroll: true }}>

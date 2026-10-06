@@ -1,11 +1,17 @@
 <?php
 
+use App\Http\Controllers\BusinessAnalysisController;
+use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\CompetitorAnalysisController;
+use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\CreepRunController;
-use App\Http\Controllers\CreepTargetController;
-use App\Http\Controllers\CreepTargetPauseController;
+use App\Http\Controllers\CurrentBusinessController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeployController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LandscapeController;
+use App\Http\Controllers\WatchedPageController;
+use App\Http\Controllers\WatchedPagePauseController;
 use App\Http\Controllers\Webhooks\CreepCallbackController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,26 +35,72 @@ if (! app()->isProduction()) {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('creep-targets', CreepTargetController::class)->except('edit');
+    Route::resource('businesses', BusinessController::class)->except('edit');
+
+    Route::get('businesses/{business}/analysis', [BusinessAnalysisController::class, 'index'])
+        ->name('businesses.analysis.index');
+
+    /*
+     * Each run spends the user's own key, so — like creeping on demand — the
+     * button is throttled.
+     */
+    Route::post('businesses/{business}/analysis', [BusinessAnalysisController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('businesses.analysis.store');
+
+    /*
+     * The business set against all its competitors, shown on the dashboard.
+     * Spends the user's key, so throttled like the other analyses.
+     */
+    Route::post('businesses/{business}/landscape', [LandscapeController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('businesses.landscape.store');
+
+    /*
+     * Picking a business in the sidebar chooser. Switching is its own write
+     * rather than a side effect of viewing a business, so prefetching a link
+     * can never change which business the app is working on.
+     */
+    Route::put('current-business', [CurrentBusinessController::class, 'update'])
+        ->name('current-business.update');
+
+    /*
+     * Competitors belong to a business; once one exists it is addressed on
+     * its own (`/competitors/{competitor}`), and so are its watched pages.
+     */
+    Route::resource('businesses.competitors', CompetitorController::class)
+        ->shallow()
+        ->except('edit');
+
+    Route::get('competitors/{competitor}/analysis', [CompetitorAnalysisController::class, 'index'])
+        ->name('competitors.analysis.index');
+
+    Route::post('competitors/{competitor}/analysis', [CompetitorAnalysisController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('competitors.analysis.store');
+
+    Route::resource('competitors.watched-pages', WatchedPageController::class)
+        ->shallow()
+        ->except(['index', 'edit']);
 
     /*
      * Creeping on demand costs the same as creeping on a schedule, so the
      * button is throttled — no amount of clicking should outrun a plan.
      */
-    Route::post('creep-targets/{creep_target}/runs', [CreepRunController::class, 'store'])
+    Route::post('watched-pages/{watched_page}/runs', [CreepRunController::class, 'store'])
         ->middleware('throttle:20,1')
-        ->name('creep-targets.runs.store');
+        ->name('watched-pages.runs.store');
 
     /*
      * Stopping without deleting. Pausing is a one-click action rather than a
      * field on the settings form, because "stop creeping this" should never
-     * require a trip through everything else about the target.
+     * require a trip through everything else about the page.
      */
-    Route::post('creep-targets/{creep_target}/pause', [CreepTargetPauseController::class, 'store'])
-        ->name('creep-targets.pause.store');
+    Route::post('watched-pages/{watched_page}/pause', [WatchedPagePauseController::class, 'store'])
+        ->name('watched-pages.pause.store');
 
-    Route::delete('creep-targets/{creep_target}/pause', [CreepTargetPauseController::class, 'destroy'])
-        ->name('creep-targets.pause.destroy');
+    Route::delete('watched-pages/{watched_page}/pause', [WatchedPagePauseController::class, 'destroy'])
+        ->name('watched-pages.pause.destroy');
 });
 
 /*

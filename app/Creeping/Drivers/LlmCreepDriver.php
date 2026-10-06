@@ -2,18 +2,17 @@
 
 namespace App\Creeping\Drivers;
 
+use App\Ai\UserKeyProvider;
 use App\Creeping\Contracts\CreepDriver;
-use App\Creeping\Contracts\CreepInstructions;
 use App\Creeping\Data\CreepResult;
-use App\Creeping\Data\ProductPayload;
+use App\Creeping\Data\PagePayload;
 use App\Creeping\Exceptions\PageFetchFailed;
 use App\Creeping\Fetching\PageDigest;
 use App\Creeping\Fetching\PageFetcher;
+use App\Creeping\WatchInstructions;
 use App\Enums\CreepProvider;
-use App\Models\ApiKey;
 use App\Models\CreepRun;
 use Illuminate\Http\Client\RequestException;
-use Laravel\Ai\Ai;
 use Laravel\Ai\Exceptions\InsufficientCreditsException;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
@@ -26,13 +25,14 @@ use RuntimeException;
  * assembles its price in JavaScript will come back thin — that is the trade
  * for a driver that needs nothing but an API key.
  *
- * Which model is asked what, and how much of the page it is shown, comes from
- * the target's {@see CreepInstructions}. This driver only knows about pages,
- * keys and clocks.
+ * What the model is shown and asked comes from {@see WatchInstructions}, which
+ * puts the user's own description of what to watch in the prompt. This driver
+ * only knows about pages, keys and clocks.
  *
- * The key is always one the user added in the app and picked for this target.
- * There is no key in the environment to fall back on, so a target without one
- * cannot be crept until somebody chooses a key for it.
+ * The key is always one the user added in the app and picked for this page,
+ * spent through {@see UserKeyProvider}. There is no key in the environment to
+ * fall back on, so a page without one cannot be crept until somebody
+ * chooses a key for it.
  *
  * The whole thing is bounded by a wall-clock budget, because a synchronous run
  * that outlives its queue reservation would be picked up and crept a second
@@ -51,6 +51,8 @@ final class LlmCreepDriver implements CreepDriver
     public function __construct(
         private array $config,
         private PageFetcher $fetcher,
+        private UserKeyProvider $keys = new UserKeyProvider,
+        private WatchInstructions $instructions = new WatchInstructions,
     ) {}
 
     public function name(): string
@@ -63,20 +65,20 @@ final class LlmCreepDriver implements CreepDriver
         $started = microtime(true);
         $deadline = $started + (float) ($this->config['budget'] ?? 70);
 
-        $instructions = $run->target->type->instructions();
+        $instructions = $this->instructions;
 
-        $apiKey = $run->target->apiKey;
+        $apiKey = $run->watchedPage->apiKey;
 
         // Checked before the page is fetched: without a key there is nothing
         // to read the page with, so fetching it would only waste the request.
         if ($apiKey === null) {
             return CreepResult::failed(
-                'This target has no API key. Choose one in the target\'s settings, or add one under Settings → API keys.'
+                'This page has no API key. Choose one in the page\'s settings, or add one under Settings → API keys.'
             );
         }
 
         try {
-            $page = $this->fetcher->fetch($run->target->url);
+            $page = $this->fetcher->fetch($run->watchedPage->url);
         } catch (PageFetchFailed $exception) {
             // A page that is gone, or an address we won't connect to, is not
             // going to be different in five minutes.
@@ -97,7 +99,8 @@ final class LlmCreepDriver implements CreepDriver
             return CreepResult::failed($instructions->unreadable($page->url));
         }
 
-        [$instance, $provider, $model] = $this->provider($apiKey);
+        $provider = $apiKey->provider;
+        $model = $this->model();
 
         $remaining = min(
             (int) ($this->config['timeout'] ?? 45),
@@ -108,32 +111,25 @@ final class LlmCreepDriver implements CreepDriver
             return CreepResult::failed('Fetching the page used up the whole run, so the model never saw it.');
         }
 
-        $prompt = $digest->toPrompt($page->url);
+        $prompt = $instructions->prompt($run->watchedPage, $digest, $page->url);
 
         try {
-            $response = $instructions->agent()->prompt(
+            $response = $this->keys->using($apiKey, fn (string $instance) => $instructions->agent()->prompt(
                 $prompt,
                 provider: $instance,
                 model: $model,
                 timeout: $remaining,
-            );
+            ));
         } catch (InsufficientCreditsException $exception) {
             return CreepResult::failed(
                 'The model provider says there is no credit left on this key. Retrying will not help until it is topped up.'
             );
         } catch (RequestException $exception) {
             return $this->rejected($exception, $provider);
-        } finally {
-            // The key lives in the config repository for exactly as long as
-            // the call takes, and no longer.
-            $this->forget($instance);
         }
 
         if (! $response instanceof StructuredAgentResponse) {
-            throw new RuntimeException(sprintf(
-                'The %s agent did not return structured output.',
-                $run->target->type->value,
-            ));
+            throw new RuntimeException('The watched page agent did not return structured output.');
         }
 
         return CreepResult::succeeded($this->payload(
@@ -142,58 +138,14 @@ final class LlmCreepDriver implements CreepDriver
     }
 
     /**
-     * Register the provider this run should bill, and say which model to use.
-     *
-     * The key is the user's own — they pay their provider directly, and
-     * Creeper never holds a balance.
-     *
-     * @return array{0: string, 1: CreepProvider, 2: string|null}
+     * The model to ask. Empty means the provider's own default, rather than a
+     * pinned name that will age badly.
      */
-    private function provider(ApiKey $apiKey): array
+    private function model(): ?string
     {
         $model = $this->config['model'] ?? null;
-        $model = is_string($model) && $model !== '' ? $model : null;
 
-        return [
-            $this->register("creep_key_{$apiKey->id}", $apiKey->provider, $apiKey->key),
-            $apiKey->provider,
-            $model,
-        ];
-    }
-
-    /**
-     * Make a one-off AI SDK provider that spends this particular key.
-     *
-     * The SDK takes its credentials from configuration, so a key that belongs
-     * to a user has to be put there for the duration of the call. Everything
-     * about that — the naming, the teardown — is deliberately confined to this
-     * method and {@see forget()}.
-     */
-    private function register(string $instance, CreepProvider $provider, #[\SensitiveParameter] string $key): string
-    {
-        config(["ai.providers.{$instance}" => [
-            'driver' => $provider->lab()->value,
-            'key' => $key,
-        ]]);
-
-        // Resolved providers are memoised by name, so a stale one would keep
-        // spending the previous key.
-        Ai::forgetInstance($instance);
-
-        return $instance;
-    }
-
-    /**
-     * Put the key beyond reach again.
-     *
-     * `config()` is dumped by error pages and reporting tools, so leaving a
-     * key in it after the call would be a slow leak.
-     */
-    private function forget(string $instance): void
-    {
-        Ai::forgetInstance($instance);
-
-        config(["ai.providers.{$instance}" => null]);
+        return is_string($model) && $model !== '' ? $model : null;
     }
 
     /**
@@ -209,7 +161,7 @@ final class LlmCreepDriver implements CreepDriver
 
         if ($status === 401 || $status === 403) {
             return CreepResult::failed(
-                "{$provider->label()} rejected the key this target uses. Check it under Settings → API keys — retrying the same key will not help."
+                "{$provider->label()} rejected the key this page uses. Check it under Settings → API keys — retrying the same key will not help."
             );
         }
 
@@ -225,8 +177,8 @@ final class LlmCreepDriver implements CreepDriver
     /**
      * What the run hands back.
      *
-     * The product fields are whatever the model reported, loose, for
-     * {@see ProductPayload} to normalise. Everything after
+     * The summary and facts are whatever the model reported, loose, for
+     * {@see PagePayload} to normalise. Everything after
      * them is diagnostic: unknown to that class, so it is kept verbatim on the
      * snapshot's `extra`, which is where the cost of a run and the shape of
      * the page it came from belong.

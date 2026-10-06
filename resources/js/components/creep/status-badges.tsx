@@ -1,14 +1,12 @@
 import {
     CheckCircle2,
     CircleDashed,
-    CircleSlash,
-    Clock,
     LoaderCircle,
     PauseCircle,
     TriangleAlert,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import type { Availability, RunStatus, TargetStatus } from '@/types';
+import type { PageStatus, RunStatus } from '@/types';
 
 /**
  * Every badge pairs its ribbon colour with an icon and a word, so state is
@@ -17,33 +15,11 @@ import type { Availability, RunStatus, TargetStatus } from '@/types';
  * damage, grey is "not known yet".
  */
 
-export function AvailabilityBadge({
-    availability,
-    label,
-}: {
-    availability: Availability;
-    label: string;
-}) {
-    const config = {
-        in_stock: { variant: 'ok' as const, Icon: CheckCircle2 },
-        out_of_stock: { variant: 'bad' as const, Icon: CircleSlash },
-        preorder: { variant: 'warn' as const, Icon: Clock },
-        unknown: { variant: 'muted' as const, Icon: CircleDashed },
-    }[availability];
-
-    return (
-        <Badge variant={config.variant}>
-            <config.Icon aria-hidden />
-            {label}
-        </Badge>
-    );
-}
-
-export function TargetStatusBadge({
+export function PageStatusBadge({
     status,
     label,
 }: {
-    status: TargetStatus;
+    status: PageStatus;
     label: string;
 }) {
     const config = {

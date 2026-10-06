@@ -15,7 +15,7 @@ use RuntimeException;
  *
  * The agent may answer either way:
  *
- *  - 200 with a JSON product body — the run completes immediately.
+ *  - 200 with a JSON reading ({summary, facts}) — the run completes immediately.
  *  - 202 Accepted — the agent took the work and will POST its results to the
  *    signed `callback_url` when it's done. Real agents take minutes, so this
  *    is the path most of them will want.
@@ -61,14 +61,19 @@ class HttpCreepDriver implements CreepDriver
 
         $response = $request->post($endpoint, [
             'run_id' => $run->id,
-            'target_id' => $run->target->id,
-            'type' => $run->target->type->value,
-            'url' => $run->target->url,
-            'settings' => $run->target->settings ?? [],
+            'watched_page_id' => $run->watchedPage->id,
+            // The same id under its old name. Self-hosted agents may still
+            // read it, so it stays until they have had time to move over.
+            'target_id' => $run->watchedPage->id,
+            // What the user wants watched, in their own words. Report it as
+            // {summary, facts: [{label, value}]}.
+            'watch_for' => $run->watchedPage->watch_for,
+            'url' => $run->watchedPage->url,
+            'settings' => $run->watchedPage->settings ?? [],
             'callback_url' => $this->callbackUrl($run),
-            // The key this target was given. The agent spends it on the
+            // The key this page was given. The agent spends it on the
             // user's behalf; we never hold a balance and never mark it up.
-            ...array_filter(['api_key' => $run->target->apiKey?->key]),
+            ...array_filter(['api_key' => $run->watchedPage->apiKey?->key]),
         ]);
 
         if ($response->accepted()) {
@@ -86,7 +91,7 @@ class HttpCreepDriver implements CreepDriver
         // site. Retrying won't change the answer, so end the run here.
         if ($response->clientError()) {
             return CreepResult::failed(
-                'The creeping agent rejected the target: '.$response->status().' '.mb_substr($response->body(), 0, 500)
+                'The creeping agent rejected the page: '.$response->status().' '.mb_substr($response->body(), 0, 500)
             );
         }
 

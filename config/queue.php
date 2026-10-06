@@ -46,7 +46,7 @@ return [
              * application, which is `RunCreep::$timeout`. If a job is still
              * running when its reservation expires, the queue hands the same
              * job to another worker — which for a creep means creeping the
-             * target twice and paying for it twice.
+             * page twice and paying for it twice.
              */
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 330),
             'after_commit' => false,

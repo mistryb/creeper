@@ -52,8 +52,9 @@ export default function DeleteUser({ email }: { email: string }) {
                     <DialogContent>
                         <DialogTitle>Delete your account?</DialogTitle>
                         <DialogDescription>
-                            Every target, price history and run log goes with
-                            it, permanently. Type your email address to confirm.
+                            Every watched page, price history and run log goes
+                            with it, permanently. Type your email address to
+                            confirm.
                         </DialogDescription>
 
                         <Form

@@ -1,15 +1,16 @@
-import { Head, Link } from '@inertiajs/react';
-import { Bug, Plus } from 'lucide-react';
+import { Head, Link, usePoll } from '@inertiajs/react';
+import { Building2, Plus } from 'lucide-react';
+import { useEffect } from 'react';
 import { ChangeList } from '@/components/creep/change-list';
-import { LatestReading } from '@/components/creep/latest-reading';
-import { RunStatusBadge } from '@/components/creep/status-badges';
 import {
-    EmptyLine,
-    EmptyState,
-    Page,
-    SectionHeading,
-    StatTile,
-} from '@/components/ds';
+    ActivityFilters,
+    ActivityTable,
+} from '@/components/dashboard/activity';
+import { ComparisonMatrix } from '@/components/dashboard/comparison-matrix';
+import { Gaps } from '@/components/dashboard/gaps';
+import { PositioningMap } from '@/components/dashboard/positioning-map';
+import { WhereYouStand } from '@/components/dashboard/where-you-stand';
+import { EmptyState, Page, SectionHeading, StatTile } from '@/components/ds';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -18,34 +19,107 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { formatRelative, hostOf } from '@/lib/format';
 import { dashboard } from '@/routes';
-import { create, index, show } from '@/routes/creep-targets';
+import { create as createBusiness } from '@/routes/businesses';
+import { create as createCompetitor } from '@/routes/businesses/competitors';
 import type {
+    Business,
+    CompetitorActivity,
     CreepChange,
-    CreepRun,
-    CreepTarget,
+    DashboardFilters,
+    DashboardGap,
+    LandscapeAnalysis,
     ResourceCollection,
+    SelectOption,
 } from '@/types';
 
 type Props = {
+    /** The business picked in the sidebar chooser; null before there is one. */
+    business: { data: Business } | null;
+    filters: DashboardFilters;
+    categories: SelectOption[];
+    competitors: { id: number; name: string }[];
     stats: {
-        targets: number;
-        active: number;
-        failing: number;
-        changesThisWeek: number;
+        competitors: number;
+        watchedPages: number;
+        changes: number;
+        parked: number;
     };
-    recentChanges: ResourceCollection<CreepChange>;
-    recentRuns: ResourceCollection<CreepRun>;
-    watchlist: ResourceCollection<CreepTarget>;
+    landscape: { data: LandscapeAnalysis } | null;
+    latestLandscapeRun: { data: LandscapeAnalysis } | null;
+    isComparing: boolean;
+    apiKeys: SelectOption[];
+    activity: CompetitorActivity[];
+    changes: ResourceCollection<CreepChange>;
+    gaps: DashboardGap[];
 };
 
-export default function Dashboard({
+export default function Dashboard(props: Props) {
+    if (props.business === null) {
+        return (
+            <>
+                <Head title="Dashboard" />
+                <Page>
+                    <SectionHeading title="Dashboard" />
+                    <EmptyState
+                        icon={Building2}
+                        title="No business yet"
+                        actions={
+                            <Button asChild>
+                                <Link href={createBusiness()}>
+                                    <Plus aria-hidden />
+                                    Set up your business
+                                </Link>
+                            </Button>
+                        }
+                    >
+                        Describe your business first. Then add the competitors
+                        you want Creeper to set you against.
+                    </EmptyState>
+                </Page>
+            </>
+        );
+    }
+
+    return <BusinessDashboard {...props} business={props.business} />;
+}
+
+function BusinessDashboard({
+    business: { data: business },
+    filters,
+    categories,
+    competitors,
     stats,
-    recentChanges,
-    recentRuns,
-    watchlist,
-}: Props) {
+    landscape,
+    latestLandscapeRun,
+    isComparing,
+    apiKeys,
+    activity,
+    changes,
+    gaps,
+}: Props & { business: { data: Business } }) {
+    // A comparison takes a minute or two; check back while one is going.
+    const { start, stop } = usePoll(
+        3000,
+        { only: ['landscape', 'latestLandscapeRun', 'isComparing'] },
+        { autoStart: false },
+    );
+
+    useEffect(() => {
+        if (isComparing) {
+            start();
+        } else {
+            stop();
+        }
+
+        return stop;
+    }, [isComparing, start, stop]);
+
+    const report = landscape?.data.report ?? null;
+    const filteredTo = competitors.find(
+        (competitor) => competitor.id === filters.competitor,
+    );
+
     return (
         <>
             <Head title="Dashboard" />
@@ -53,181 +127,146 @@ export default function Dashboard({
             <Page>
                 <SectionHeading
                     title="Dashboard"
-                    note="What Creeper has been up to"
+                    note={`${business.name} against ${stats.competitors === 1 ? '1 competitor' : `${stats.competitors} competitors`}`}
                     actions={
-                        <Button asChild>
-                            <Link href={create()}>
+                        <Button variant="outline" asChild>
+                            <Link href={createCompetitor(business.id)}>
                                 <Plus aria-hidden />
-                                New target
+                                New competitor
                             </Link>
                         </Button>
                     }
                 />
 
-                {stats.targets === 0 ? (
-                    <EmptyState
-                        icon={Bug}
-                        title="Nothing to creep"
-                        actions={
-                            <>
-                                <Button asChild>
-                                    <Link href={create()}>
-                                        <Plus aria-hidden />
-                                        Add your first target
-                                    </Link>
-                                </Button>
-                                <Button variant="outline" asChild>
-                                    <Link href={index()}>View targets</Link>
-                                </Button>
-                            </>
-                        }
-                    >
-                        Point Creeper at a product page and it will track the
-                        price and the stock, and tell you when either moves.
-                    </EmptyState>
-                ) : (
-                    <>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <StatTile
-                                label="Targets"
-                                value={stats.targets.toLocaleString()}
-                            />
-                            <StatTile
-                                label="Active"
-                                value={stats.active.toLocaleString()}
-                                tone="ribbon"
-                            />
-                            <StatTile
-                                label="Changes this week"
-                                value={stats.changesThisWeek.toLocaleString()}
-                            />
-                            <StatTile
-                                label="Parked"
-                                value={stats.failing.toLocaleString()}
-                                tone={stats.failing > 0 ? 'warn' : 'default'}
-                                note={
-                                    stats.failing > 0
-                                        ? 'needs a look'
-                                        : 'all clear'
-                                }
-                            />
-                        </div>
+                <WhereYouStand
+                    business={business}
+                    landscape={landscape?.data ?? null}
+                    latestRun={latestLandscapeRun?.data ?? null}
+                    isComparing={isComparing}
+                    apiKeys={apiKeys}
+                    hasCompetitors={stats.competitors > 0}
+                />
 
-                        <div className="grid gap-6 lg:grid-cols-2">
+                {report && (
+                    <section className="space-y-4">
+                        <SectionHeading
+                            as="h2"
+                            size="sm"
+                            title="How you compare"
+                            note={`${report.dimensions.length} dimensions chosen for your market`}
+                        />
+
+                        <ComparisonMatrix report={report} />
+
+                        {report.map && report.map.points.length > 1 && (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Recent changes</CardTitle>
+                                    <CardTitle>Positioning</CardTitle>
                                     <CardDescription>
-                                        What moved across everything you watch.
+                                        {report.map.x_axis} against{' '}
+                                        {report.map.y_axis.toLowerCase()}.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <ChangeList
-                                        changes={recentChanges.data}
-                                        showTarget
-                                    />
+                                <CardContent className="max-w-3xl">
+                                    <PositioningMap map={report.map} />
                                 </CardContent>
                             </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Watchlist</CardTitle>
-                                    <CardDescription>
-                                        Your five most recent targets.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Watchlist targets={watchlist.data} />
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Recent runs</CardTitle>
-                                <CardDescription>
-                                    The last ten times Creeper went looking.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <RecentRuns runs={recentRuns.data} />
-                            </CardContent>
-                        </Card>
-                    </>
+                        )}
+                    </section>
                 )}
+
+                <section className="space-y-4">
+                    <SectionHeading
+                        as="h2"
+                        size="sm"
+                        title="Who's moving"
+                        note={`Changes on their pages in the last ${filters.window} days`}
+                        actions={
+                            <ActivityFilters
+                                filters={filters}
+                                competitors={competitors}
+                                categories={categories}
+                            />
+                        }
+                    />
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <StatTile
+                            label="Competitors"
+                            value={stats.competitors.toLocaleString()}
+                        />
+                        <StatTile
+                            label="Pages watched"
+                            value={stats.watchedPages.toLocaleString()}
+                        />
+                        <StatTile
+                            label={`Changes · ${filters.window}d`}
+                            value={stats.changes.toLocaleString()}
+                            tone="ribbon"
+                        />
+                        <StatTile
+                            label="Parked"
+                            value={stats.parked.toLocaleString()}
+                            tone={stats.parked > 0 ? 'warn' : 'default'}
+                            note={
+                                stats.parked > 0 ? 'needs a look' : 'all clear'
+                            }
+                        />
+                    </div>
+
+                    <ActivityTable
+                        activity={activity}
+                        filters={filters}
+                        categories={categories}
+                    />
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>What changed</CardTitle>
+                            <CardDescription>
+                                {[
+                                    filteredTo?.name ?? 'Every competitor',
+                                    filters.category
+                                        ? categories
+                                              .find(
+                                                  (category) =>
+                                                      category.value ===
+                                                      filters.category,
+                                              )
+                                              ?.label.toLowerCase()
+                                        : null,
+                                    `last ${filters.window} days`,
+                                ]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                . Newest first.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ChangeList
+                                changes={changes.data}
+                                showPage
+                                emptyMessage="Nothing moved in this window"
+                            />
+                        </CardContent>
+                    </Card>
+                </section>
+
+                <section className="space-y-4">
+                    <SectionHeading
+                        as="h2"
+                        size="sm"
+                        title="What's missing"
+                        note="Gaps that make the comparison less sure"
+                    />
+                    <Card>
+                        <CardContent>
+                            <Gaps gaps={gaps} />
+                        </CardContent>
+                    </Card>
+                </section>
             </Page>
         </>
-    );
-}
-
-function Watchlist({ targets }: { targets: CreepTarget[] }) {
-    if (targets.length === 0) {
-        return <EmptyLine>Nothing here yet</EmptyLine>;
-    }
-
-    return (
-        <ul className="divide-y divide-rule">
-            {targets.map((target) => (
-                <li
-                    key={target.id}
-                    className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
-                >
-                    <div className="min-w-0">
-                        <Link
-                            href={show(target.id)}
-                            className="block truncate text-sm font-medium underline decoration-transparent underline-offset-4 hover:decoration-ribbon"
-                            prefetch
-                        >
-                            {target.latest_snapshot?.title ??
-                                target.latest_changelog_snapshot?.product ??
-                                target.display_name}
-                        </Link>
-                        <p className="truncate font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
-                            {hostOf(target.url)}
-                        </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-3">
-                        <LatestReading target={target} />
-                    </div>
-                </li>
-            ))}
-        </ul>
-    );
-}
-
-function RecentRuns({ runs }: { runs: CreepRun[] }) {
-    if (runs.length === 0) {
-        return <EmptyLine>No runs yet</EmptyLine>;
-    }
-
-    return (
-        <ul className="divide-y divide-rule">
-            {runs.map((run) => (
-                <li
-                    key={run.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
-                >
-                    <div className="flex min-w-0 items-center gap-3">
-                        <RunStatusBadge
-                            status={run.status}
-                            label={run.status_label}
-                        />
-                        {run.target && (
-                            <Link
-                                href={show(run.target.id)}
-                                className="truncate text-sm underline decoration-transparent underline-offset-4 hover:decoration-ribbon"
-                            >
-                                {run.target.display_name}
-                            </Link>
-                        )}
-                    </div>
-                    <span className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
-                        {formatRelative(run.started_at)}
-                    </span>
-                </li>
-            ))}
-        </ul>
     );
 }
 

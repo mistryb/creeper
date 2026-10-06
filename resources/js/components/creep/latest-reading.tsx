@@ -1,47 +1,31 @@
-import { AvailabilityBadge } from '@/components/creep/status-badges';
-import { formatPrice } from '@/lib/format';
-import type { CreepTarget } from '@/types';
+import type { WatchedPage } from '@/types';
 
 /**
- * The one reading a list of targets is worth scanning, which is a different
- * reading per type: what the thing costs, or which version it is on.
+ * The one line of a page's latest reading worth scanning in a list: its first
+ * fact, and how many more there are.
  *
- * Sized to sit in a table cell or a sidebar row, so both lists of targets
- * report the same thing the same way.
+ * Sized to sit in a table cell or a sidebar row, so every list of watched
+ * pages reports the same thing the same way.
  */
-export function LatestReading({ target }: { target: CreepTarget }) {
-    if (target.type === 'changelog') {
-        const snapshot = target.latest_changelog_snapshot;
+export function LatestReading({ watchedPage }: { watchedPage: WatchedPage }) {
+    const snapshot = watchedPage.latest_snapshot;
+    const [first, ...rest] = snapshot?.facts ?? [];
 
-        if (!snapshot) {
-            return <span className="text-muted-foreground">—</span>;
-        }
-
-        return (
-            <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-sm font-medium">
-                    {snapshot.latest_version ?? '—'}
-                </span>
-                <span className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground tabular-nums">
-                    {snapshot.feature_count.toLocaleString()} listed
-                </span>
-            </div>
-        );
+    if (!first) {
+        return <span className="text-muted-foreground">—</span>;
     }
 
-    const snapshot = target.latest_snapshot;
-
     return (
-        <div className="flex flex-wrap items-center gap-2">
-            {snapshot && (
-                <AvailabilityBadge
-                    availability={snapshot.availability}
-                    label={snapshot.availability_label}
-                />
-            )}
-            <span className="font-mono text-sm font-medium tabular-nums">
-                {formatPrice(snapshot?.price_amount, snapshot?.currency)}
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="truncate text-sm">
+                <span className="text-muted-foreground">{first.label}:</span>{' '}
+                <span className="font-mono font-medium">{first.value}</span>
             </span>
+            {rest.length > 0 && (
+                <span className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground tabular-nums">
+                    +{rest.length} more
+                </span>
+            )}
         </div>
     );
 }

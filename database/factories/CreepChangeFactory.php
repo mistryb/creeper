@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Enums\ChangeDirection;
+use App\Enums\ChangeKind;
 use App\Models\CreepChange;
-use App\Models\CreepTarget;
-use App\Models\ProductSnapshot;
+use App\Models\PageSnapshot;
+use App\Models\WatchedPage;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -20,13 +20,13 @@ class CreepChangeFactory extends Factory
     public function definition(): array
     {
         return [
-            'creep_target_id' => CreepTarget::factory(),
-            'from_snapshot_id' => ProductSnapshot::factory(),
-            'to_snapshot_id' => ProductSnapshot::factory(),
-            'field' => 'price',
-            'old_value' => '£24.99',
-            'new_value' => '£19.99',
-            'direction' => ChangeDirection::Down,
+            'watched_page_id' => WatchedPage::factory(),
+            'from_snapshot_id' => fn (array $attributes): int => PageSnapshot::factory()->of(WatchedPage::query()->findOrFail($attributes['watched_page_id']))->create()->id,
+            'to_snapshot_id' => fn (array $attributes): int => PageSnapshot::factory()->of(WatchedPage::query()->findOrFail($attributes['watched_page_id']))->create()->id,
+            'label' => 'Pro plan',
+            'old_value' => '$20/user/month',
+            'new_value' => '$25/user/month',
+            'kind' => ChangeKind::Changed,
             'detected_at' => Carbon::now(),
         ];
     }

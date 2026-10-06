@@ -25,7 +25,7 @@ class CreepRunResource extends JsonResource
             'finished_at' => $this->finished_at?->toIso8601String(),
             'duration_ms' => $this->duration_ms,
             'error' => $this->error,
-            'target' => CreepTargetResource::make($this->whenLoaded('target')),
+            'watched_page' => WatchedPageResource::make($this->whenLoaded('watchedPage')),
         ];
     }
 }

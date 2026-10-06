@@ -13,26 +13,23 @@ it('completes a pending run from a signed callback', function () {
     $run = CreepRun::factory()->running()->create();
 
     $this->postJson(callbackUrl($run), [
-        'title' => 'Delivered late, but delivered',
-        'price' => 31.5,
-        'currency' => 'gbp',
-        'availability' => 'in_stock',
+        'summary' => 'Delivered late, but delivered.',
+        'facts' => [['label' => 'Pro plan', 'value' => '$31.50/month']],
     ])->assertOk();
 
     $run->refresh();
     $snapshot = $run->snapshot;
 
     expect($run->status)->toBe(RunStatus::Succeeded)
-        ->and($snapshot->title)->toBe('Delivered late, but delivered')
-        ->and($snapshot->price_amount)->toBe(3150)
-        ->and($snapshot->currency)->toBe('GBP')
-        ->and($snapshot->creep_target_id)->toBe($run->creep_target_id);
+        ->and($snapshot->summary)->toBe('Delivered late, but delivered.')
+        ->and($snapshot->facts)->toBe([['label' => 'Pro plan', 'value' => '$31.50/month']])
+        ->and($snapshot->watched_page_id)->toBe($run->watched_page_id);
 });
 
 it('turns away an unsigned callback', function () {
     $run = CreepRun::factory()->running()->create();
 
-    $this->postJson(route('creep.callback', $run), ['title' => 'Nope', 'price' => 1])
+    $this->postJson(route('creep.callback', $run), ['summary' => 'Nope', 'facts' => []])
         ->assertForbidden();
 
     expect($run->fresh()->status)->toBe(RunStatus::Running);
@@ -45,13 +42,13 @@ it('turns away a callback whose signature has expired', function () {
 
     $this->travel(2)->minutes();
 
-    $this->postJson($url, ['title' => 'Too late', 'price' => 1])->assertForbidden();
+    $this->postJson($url, ['summary' => 'Too late', 'facts' => []])->assertForbidden();
 });
 
 it('will not overwrite a run that already finished', function () {
     $run = CreepRun::factory()->create(['status' => RunStatus::Succeeded]);
 
-    $this->postJson(callbackUrl($run), ['title' => 'Second helping', 'price' => 5])
+    $this->postJson(callbackUrl($run), ['summary' => 'Second helping', 'facts' => []])
         ->assertStatus(409);
 
     expect($run->fresh()->snapshot)->toBeNull();

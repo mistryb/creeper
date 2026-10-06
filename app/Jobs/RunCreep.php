@@ -6,10 +6,10 @@ use App\Actions\CompleteCreepRun;
 use App\Creeping\CreepManager;
 use App\Creeping\Exceptions\InvalidCreepPayload;
 use App\Enums\CreepOutcome;
+use App\Enums\PageStatus;
 use App\Enums\RunStatus;
-use App\Enums\TargetStatus;
 use App\Models\CreepRun;
-use App\Models\CreepTarget;
+use App\Models\WatchedPage;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -18,9 +18,9 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Creeps one target, once.
+ * Creeps one page, once.
  *
- * Each attempt gets its own {@see CreepRun} row, so a target that succeeded
+ * Each attempt gets its own {@see CreepRun} row, so a page that succeeded
  * on the third try shows all three attempts in its history rather than
  * quietly overwriting the failures.
  */
@@ -33,23 +33,23 @@ class RunCreep implements ShouldBeUnique, ShouldQueue
      *
      * `retry_after` in config/queue.php must stay longer than this. A job that
      * is still running when its reservation lapses is handed to a second
-     * worker, and two workers creeping one target means paying twice for one
+     * worker, and two workers creeping one page means paying twice for one
      * answer. The `llm` driver keeps itself well inside this on its own; the
      * `http` driver is only bounded by whatever your agent does.
      */
     public int $timeout = 300;
 
     /**
-     * One target can only be crept once at a time. Long enough to cover a
+     * One page can only be crept once at a time. Long enough to cover a
      * full run plus every backoff step.
      */
     public int $uniqueFor = 3600;
 
-    public function __construct(public CreepTarget $target) {}
+    public function __construct(public WatchedPage $watchedPage) {}
 
     public function uniqueId(): string
     {
-        return (string) $this->target->id;
+        return (string) $this->watchedPage->id;
     }
 
     public function tries(): int
@@ -73,7 +73,7 @@ class RunCreep implements ShouldBeUnique, ShouldQueue
         $driver = $creeper->driver();
 
         /** @var CreepRun $run */
-        $run = $this->target->runs()->create([
+        $run = $this->watchedPage->runs()->create([
             'status' => RunStatus::Running,
             'driver' => $driver->name(),
             'started_at' => Carbon::now(),
@@ -102,8 +102,8 @@ class RunCreep implements ShouldBeUnique, ShouldQueue
     {
         $this->penaliseTarget();
 
-        Log::warning('Creep failed for target.', [
-            'creep_target_id' => $this->target->id,
+        Log::warning('Creep failed for page.', [
+            'watched_page_id' => $this->watchedPage->id,
             'error' => $exception?->getMessage(),
         ]);
     }
@@ -124,11 +124,11 @@ class RunCreep implements ShouldBeUnique, ShouldQueue
 
     /**
      * The agent will post to the run's signed callback when it finishes. Move
-     * the schedule on so the sweeper doesn't queue the same target again.
+     * the schedule on so the sweeper doesn't queue the same page again.
      */
     protected function awaitCallback(): void
     {
-        $this->target->rescheduleFrom(Carbon::now());
+        $this->watchedPage->rescheduleFrom(Carbon::now());
     }
 
     /**
@@ -142,26 +142,26 @@ class RunCreep implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Count the failure and park the target once it's clearly dead, so a
+     * Count the failure and park the page once it's clearly dead, so a
      * broken URL stops burning agent budget forever.
      */
     protected function penaliseTarget(): void
     {
-        $target = $this->target->fresh();
+        $watchedPage = $this->watchedPage->fresh();
 
-        if (! $target instanceof CreepTarget) {
+        if (! $watchedPage instanceof WatchedPage) {
             return;
         }
 
-        $failures = $target->consecutive_failures + 1;
+        $failures = $watchedPage->consecutive_failures + 1;
 
-        $target->forceFill([
+        $watchedPage->forceFill([
             'consecutive_failures' => $failures,
-            'status' => $failures >= CreepTarget::FAILURE_LIMIT
-                ? TargetStatus::Failed
-                : $target->status,
+            'status' => $failures >= WatchedPage::FAILURE_LIMIT
+                ? PageStatus::Failed
+                : $watchedPage->status,
         ])->save();
 
-        $target->rescheduleFrom(Carbon::now());
+        $watchedPage->rescheduleFrom(Carbon::now());
     }
 }

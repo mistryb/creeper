@@ -4,9 +4,8 @@ import type { ReactNode } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { ChangeList } from '@/components/creep/change-list';
 import {
-    AvailabilityBadge,
     RunStatusBadge,
-    TargetStatusBadge,
+    PageStatusBadge,
 } from '@/components/creep/status-badges';
 import {
     Changed,
@@ -23,6 +22,7 @@ import {
     Field,
     FormActions,
     Meter,
+    Score,
     Ok,
     Panel,
     PanelBar,
@@ -31,6 +31,7 @@ import {
     SectionHeading,
     StatTile,
     Terminal,
+    Tally,
 } from '@/components/ds';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -67,6 +68,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import type { CreepChange } from '@/types';
 
 /**
@@ -118,21 +120,33 @@ const PALETTE: { token: string; hex: string; note: string; ink?: boolean }[] = [
 const CHANGES: CreepChange[] = [
     {
         id: 1,
-        field: 'price',
-        old_value: '28900',
-        new_value: '21900',
-        direction: 'down',
-        description: 'Price fell from $289.00 to $219.00',
+        label: 'Pro plan',
+        old_value: '$20/user/month',
+        new_value: '$25/user/month',
+        kind: 'changed',
+        kind_label: 'Changed',
+        description: 'Pro plan: $20/user/month → $25/user/month',
         detected_at: '2026-08-20T09:14:00Z',
     },
     {
         id: 2,
-        field: 'availability',
-        old_value: 'out_of_stock',
-        new_value: 'in_stock',
-        direction: 'changed',
-        description: 'Back in stock — 3 left',
+        label: 'Latest release',
+        old_value: null,
+        new_value: 'v4.2.0',
+        kind: 'added',
+        kind_label: 'New',
+        description: 'New: Latest release — v4.2.0',
         detected_at: '2026-08-19T17:02:00Z',
+    },
+    {
+        id: 3,
+        label: 'Free tier',
+        old_value: '10k events/month',
+        new_value: null,
+        kind: 'removed',
+        kind_label: 'Gone',
+        description: 'Gone: Free tier (was 10k events/month)',
+        detected_at: '2026-08-18T11:40:00Z',
     },
 ];
 
@@ -429,7 +443,7 @@ export default function DesignSystem() {
                                     actions={
                                         <Button>
                                             <Plus aria-hidden />
-                                            Add your first target
+                                            Add your first watched page
                                         </Button>
                                     }
                                 >
@@ -457,8 +471,12 @@ export default function DesignSystem() {
                             </Button>
                             <Button variant="outline">Previous</Button>
                             <Button variant="ghost">Stop creeping</Button>
-                            <Button variant="destructive">Delete target</Button>
-                            <Button variant="link">Back to targets</Button>
+                            <Button variant="destructive">
+                                Delete watched page
+                            </Button>
+                            <Button variant="link">
+                                Back to watched pages
+                            </Button>
                         </Spec>
 
                         <Spec label="Sizes and states">
@@ -491,21 +509,9 @@ export default function DesignSystem() {
                         </Spec>
 
                         <Spec label="The app's status badges">
-                            <TargetStatusBadge status="active" label="Active" />
-                            <TargetStatusBadge status="paused" label="Paused" />
-                            <TargetStatusBadge status="failed" label="Parked" />
-                            <AvailabilityBadge
-                                availability="in_stock"
-                                label="In stock"
-                            />
-                            <AvailabilityBadge
-                                availability="out_of_stock"
-                                label="Out of stock"
-                            />
-                            <AvailabilityBadge
-                                availability="preorder"
-                                label="Preorder"
-                            />
+                            <PageStatusBadge status="active" label="Active" />
+                            <PageStatusBadge status="paused" label="Paused" />
+                            <PageStatusBadge status="failed" label="Parked" />
                             <RunStatusBadge status="running" label="Running" />
                             <RunStatusBadge
                                 status="succeeded"
@@ -532,7 +538,7 @@ export default function DesignSystem() {
                         note="Tabular data is a table — that is where green-bar earns its keep"
                     >
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <StatTile label="Targets" value="12" />
+                            <StatTile label="Watched pages" value="12" />
                             <StatTile label="Active" value="11" tone="ribbon" />
                             <StatTile
                                 label="Changes this week"
@@ -550,35 +556,26 @@ export default function DesignSystem() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead scope="col">Target</TableHead>
-                                    <TableHead scope="col">Price</TableHead>
-                                    <TableHead scope="col">Stock</TableHead>
+                                    <TableHead scope="col">Page</TableHead>
+                                    <TableHead scope="col">Latest</TableHead>
                                     <TableHead scope="col">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {[
-                                    ['Mesa 2P tent', '$219.00', 'in_stock'],
-                                    ['Kettle, 1.7L', '$41.50', 'out_of_stock'],
-                                    ['Trail runners', '$128.00', 'preorder'],
-                                ].map(([name, price, stock]) => (
+                                    ['Pricing', 'Pro plan: $25/user/month'],
+                                    ['Changelog', 'Latest release: v4.2.0'],
+                                    ['Home page', 'Headline: Ship faster'],
+                                ].map(([name, latest]) => (
                                     <TableRow key={name}>
                                         <TableCell className="font-medium">
                                             {name}
                                         </TableCell>
                                         <TableCell className="font-mono font-medium tabular-nums">
-                                            {price}
+                                            {latest}
                                         </TableCell>
                                         <TableCell>
-                                            <AvailabilityBadge
-                                                availability={
-                                                    stock as 'in_stock'
-                                                }
-                                                label={stock.replace(/_/g, ' ')}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TargetStatusBadge
+                                            <PageStatusBadge
                                                 status="active"
                                                 label="Active"
                                             />
@@ -589,6 +586,30 @@ export default function DesignSystem() {
                         </Table>
 
                         <div className="grid gap-6 lg:grid-cols-2">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Tally and Score</CardTitle>
+                                    <CardDescription>
+                                        A count against its column&rsquo;s
+                                        largest, one hue only; and a judgement
+                                        out of five.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <Tally
+                                        value={12}
+                                        max={12}
+                                        label="changes"
+                                    />
+                                    <Tally value={5} max={12} label="changes" />
+                                    <Tally value={0} max={12} label="changes" />
+                                    <div className="flex gap-4">
+                                        <Score value={4} />
+                                        <Score value={2} />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Meter</CardTitle>
@@ -669,7 +690,7 @@ export default function DesignSystem() {
                     >
                         <Card>
                             <CardHeader>
-                                <CardTitle>New target</CardTitle>
+                                <CardTitle>New watched page</CardTitle>
                                 <CardDescription>
                                     Built from Field, CheckField and
                                     FormActions.
@@ -715,6 +736,18 @@ export default function DesignSystem() {
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
+                                </Field>
+
+                                <Field
+                                    label="Describe your business"
+                                    htmlFor="ds-description"
+                                    hint="Textarea: the same keyed box as Input, for answers written in sentences."
+                                >
+                                    <Textarea
+                                        id="ds-description"
+                                        rows={4}
+                                        placeholder="What you sell, who buys it, and what sets you apart."
+                                    />
                                 </Field>
 
                                 <Field
@@ -791,8 +824,8 @@ export default function DesignSystem() {
                                 <AlertTitle>Heads up</AlertTitle>
                                 <AlertDescription>
                                     <p>
-                                        4 targets left on your plan. Nothing to
-                                        do yet.
+                                        4 watched pages left on your plan.
+                                        Nothing to do yet.
                                     </p>
                                 </AlertDescription>
                             </Alert>
@@ -801,9 +834,9 @@ export default function DesignSystem() {
                                 <AlertTitle>Creeping is paused</AlertTitle>
                                 <AlertDescription>
                                     <p>
-                                        Your targets stay exactly as they are
-                                        and pick back up as soon as a key is on
-                                        file.
+                                        Your watched pages stay exactly as they
+                                        are and pick back up as soon as a key is
+                                        on file.
                                     </p>
                                 </AlertDescription>
                             </Alert>
@@ -813,8 +846,8 @@ export default function DesignSystem() {
                                 <AlertDescription>
                                     <p>
                                         Creeper failed 5 times in a row on this
-                                        target. Fix the URL, or set it back to
-                                        active to try again.
+                                        watchedPage. Fix the URL, or set it back
+                                        to active to try again.
                                     </p>
                                 </AlertDescription>
                             </Alert>

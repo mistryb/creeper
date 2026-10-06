@@ -1,6 +1,7 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import { Cloud, Github } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
     Changed,
     Chip,
@@ -17,15 +18,15 @@ import {
 import { Button } from '@/components/ui/button';
 import MarketingLayout, { MarketingNavLink } from '@/layouts/marketing-layout';
 import { REPOSITORY_URL } from '@/lib/links';
-import { deploy, login } from '@/routes';
-import { create } from '@/routes/creep-targets';
+import { cn } from '@/lib/utils';
+import { deploy } from '@/routes';
 
 /**
  * The example run that types itself out in the hero. Only the command line is
  * typed character by character; the results land whole, the way a real run
  * reports back.
  */
-const COMMAND = '> creep shop.example.com/tents/mesa-2p --daily';
+const COMMAND = '> creep rival.example.com/pricing --daily';
 
 type OutputLine = {
     key: string;
@@ -60,25 +61,26 @@ const OUTPUT_LINES: OutputLine[] = [
         delay: 440,
         node: (
             <>
-                <Changed>~ price</Changed>
-                {'        '}
-                <Emitted>$289.00</Emitted>
+                <Changed>~ pro plan</Changed>
+                {'     '}
+                <Emitted>$49/mo</Emitted>
                 {' → '}
-                <Emitted>$219.00</Emitted>
+                <Emitted>$39/mo</Emitted>
                 {'   '}
-                <Changed>down 24%</Changed>
+                <Changed>down 20%</Changed>
             </>
         ),
     },
     {
-        key: 'stock',
+        key: 'release',
         delay: 440,
         node: (
             <>
-                <Changed>~ availability</Changed>{' '}
-                <Emitted>out of stock</Emitted>
-                {' → '}
-                <Emitted>3 left</Emitted>
+                <Changed>+ changelog</Changed>
+                {'    '}
+                <Emitted>v4.2</Emitted>
+                {' shipped '}
+                <Emitted>SSO for every plan</Emitted>
             </>
         ),
     },
@@ -180,45 +182,34 @@ function SetupStep({
 }
 
 /**
- * One of the ways to run Creeper yourself: a numbered card on the ink slab,
- * carrying its own button. The children are the sentence and the button, in
- * that order, so an option reads as prose with a key at the bottom.
+ * The two ways to get Creeper running, offered in the hero and again at the
+ * foot of the page: read the source, or deploy a copy on Laravel Cloud.
  */
-function RunOption({
-    step,
-    heading,
-    children,
-}: {
-    step: string;
-    heading: string;
-    children: ReactNode;
-}) {
+function RunButtons({ className }: { className?: string }) {
     return (
-        <li className="border border-paper-lit/20 px-6 py-7">
-            <p className="label-micro text-paper-lit/55">Option {step}</p>
-            <h3 className="mt-2.5 mb-2 font-mono text-[0.9375rem] font-semibold tracking-[0.14em] uppercase">
-                {heading}
-            </h3>
-            <div className="text-paper-lit/70">{children}</div>
-        </li>
+        <div className={cn('flex flex-wrap gap-3', className)}>
+            <Button asChild size="lg" variant="secondary">
+                <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">
+                    <Github aria-hidden="true" />
+                    View on GitHub
+                </a>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
+                <Link href={deploy()}>
+                    <Cloud aria-hidden="true" />
+                    Deploy on Laravel Cloud
+                </Link>
+            </Button>
+        </div>
     );
 }
 
 export default function Welcome() {
-    const { auth } = usePage().props;
     const { typed, revealed } = useExampleRun();
-
-    const signUpHref = auth.user ? create() : login();
-
-    const startWatching = (event: FormEvent<HTMLFormElement>): void => {
-        event.preventDefault();
-
-        router.visit(signUpHref);
-    };
 
     return (
         <>
-            <Head title="Put a page on watch" />
+            <Head title="Keep tabs on your competitors" />
 
             <MarketingLayout
                 nav={
@@ -234,11 +225,14 @@ export default function Welcome() {
             >
                 <section className="mx-auto w-full max-w-5xl px-4 pt-8 pb-10 sm:px-10 sm:pt-16 sm:pb-20">
                     <Panel>
-                        <PanelBar title="creeper" meta="watching 1 page" />
+                        <PanelBar
+                            title="creeper"
+                            meta="watching 1 competitor"
+                        />
 
                         <div className="p-6 sm:p-12">
                             <Eyebrow className="mb-5 flex flex-wrap items-center gap-2.5">
-                                <span>Page watcher</span>
+                                <span>Competitor watcher</span>
                                 <span className="text-rule">/</span>
                                 <span>Bring your own API key</span>
                             </Eyebrow>
@@ -248,48 +242,29 @@ export default function Welcome() {
                                 size="hero"
                                 className="mb-5 text-balance"
                             >
-                                Put a page
+                                Keep tabs on
                                 <br />
-                                <span className="text-ribbon">on watch.</span>
+                                <span className="text-ribbon">
+                                    the competition.
+                                </span>
                             </Display>
 
                             <p className="mb-8 max-w-[40rem] text-[1.0625rem] text-ink-soft">
-                                You have tabs you keep reopening — a price you
-                                are waiting on, a listing that might come back,
-                                a page that changes when nobody is looking.{' '}
+                                Your rivals change their prices, ship features
+                                and rewrite their plans without telling you. You
+                                find out from a customer, weeks later.{' '}
                                 <strong className="font-medium text-ink">
-                                    Creeper reads them for you
+                                    Creeper reads their pages for you
                                 </strong>{' '}
                                 and speaks up the moment something moves.
                             </p>
 
-                            <form
-                                onSubmit={startWatching}
-                                className="flex max-w-[34rem] flex-wrap gap-2"
-                            >
-                                <label className="flex flex-1 basis-60 items-center gap-2 border border-ink bg-white px-3 font-mono focus-within:shadow-[inset_0_0_0_1px_var(--color-ink)]">
-                                    <span
-                                        aria-hidden="true"
-                                        className="text-ribbon"
-                                    >
-                                        &gt;
-                                    </span>
-                                    <input
-                                        type="url"
-                                        aria-label="Page to watch"
-                                        placeholder="paste a link to watch"
-                                        className="min-w-0 flex-1 border-0 bg-transparent py-2.5 text-sm text-ink placeholder:text-ink-soft/65 focus:outline-none"
-                                    />
-                                </label>
-                                <Button type="submit" size="lg">
-                                    Creep it
-                                </Button>
-                            </form>
+                            <RunButtons className="mb-7" />
 
                             <Terminal
                                 aria-label="Example run"
                                 caret
-                                className="mt-7 min-h-46"
+                                className="min-h-46"
                             >
                                 {typed}
                                 {OUTPUT_LINES.slice(0, revealed).map((line) => (
@@ -317,12 +292,18 @@ export default function Welcome() {
                     <ol className="border border-ink">
                         <SetupStep
                             step="01"
-                            heading="Point it at a page"
-                            chips={<Chip>shop.example.com/tents/mesa-2p</Chip>}
+                            heading="Point it at a rival"
+                            chips={
+                                <>
+                                    <Chip>rival.example.com/pricing</Chip>
+                                    <Chip>rival.example.com/changelog</Chip>
+                                </>
+                            }
                         >
-                            Any URL that renders in a browser. A product page, a
-                            marketplace listing, a release page — Creeper does
-                            not need an API on the other end.
+                            Their pricing page, their changelog, a product they
+                            sell next to yours — any URL that renders in a
+                            browser. Creeper does not need their API, or their
+                            permission.
                         </SetupStep>
 
                         <SetupStep
@@ -331,15 +312,16 @@ export default function Welcome() {
                             chips={
                                 <>
                                     <Chip on>price</Chip>
-                                    <Chip on>availability</Chip>
-                                    <Chip on>title</Chip>
+                                    <Chip on>new releases</Chip>
+                                    <Chip on>breaking changes</Chip>
                                     <Chip>+ anything you name</Chip>
                                 </>
                             }
                         >
                             Describe it in plain words. Creeper turns that into
-                            fields it can pull on every visit, so you get a tidy
-                            number back instead of a wall of page.
+                            fields it can pull on every visit, so you get a
+                            price or a release note back instead of a wall of
+                            page.
                         </SetupStep>
 
                         <SetupStep
@@ -355,15 +337,15 @@ export default function Welcome() {
                             }
                         >
                             Pick a rhythm and walk away. Creeper keeps the
-                            history, draws the line, and only interrupts you
-                            when a value actually changed. Each visit counts as
-                            one check.
+                            history of every move they make and only interrupts
+                            you when something actually changed. Each visit
+                            counts as one check.
                         </SetupStep>
                     </ol>
                 </section>
 
                 <section id="start" className="bg-ink text-paper-lit">
-                    <div className="mx-auto grid w-full max-w-5xl items-start gap-8 px-4 py-12 sm:px-10 sm:py-22 lg:grid-cols-[1fr_22rem] lg:gap-14">
+                    <div className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-10 sm:py-22">
                         <div>
                             <Eyebrow tone="pale">Two ways to run it</Eyebrow>
 
@@ -377,8 +359,8 @@ export default function Welcome() {
                             <p className="max-w-[32rem] text-paper-lit/70">
                                 Creeper is an install of your own — a box you
                                 keep, or a Laravel Cloud account — watching as
-                                many pages as you like, as often as you like.
-                                Nothing is metered and nothing is capped.
+                                many competitors as you like, as often as you
+                                like. Nothing is metered and nothing is capped.
                             </p>
                             <p className="mt-3.5 max-w-[32rem] text-paper-lit/70">
                                 The thinking runs on{' '}
@@ -389,47 +371,9 @@ export default function Welcome() {
                                 it in once, you pay the model directly, and you
                                 can see exactly what each run cost you.
                             </p>
+
+                            <RunButtons className="mt-7" />
                         </div>
-
-                        <ol className="grid gap-4">
-                            <RunOption step="01" heading="Read the source">
-                                Every part of Creeper is in one repository — the
-                                drivers, the schedule, the schema. Clone it,
-                                look it over, run it locally.
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    variant="secondary"
-                                    className="mt-5 w-full"
-                                >
-                                    <a
-                                        href={REPOSITORY_URL}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
-                                        View the repository
-                                    </a>
-                                </Button>
-                            </RunOption>
-
-                            <RunOption
-                                step="02"
-                                heading="Put it on Laravel Cloud"
-                            >
-                                Would rather not keep a box alive? Copy the
-                                prompt, hand it to your agent, and it clones the
-                                repository and deploys your own copy.
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    className="mt-5 w-full"
-                                >
-                                    <Link href={deploy()}>
-                                        Deploy on Laravel Cloud
-                                    </Link>
-                                </Button>
-                            </RunOption>
-                        </ol>
                     </div>
                 </section>
             </MarketingLayout>

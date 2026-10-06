@@ -22,7 +22,7 @@ enum CreepFrequency: string
     }
 
     /**
-     * When the next run is due, or null for targets that never self-schedule.
+     * When the next run is due, or null for pages that never self-schedule.
      */
     public function nextRunAfter(?Carbon $from = null): ?Carbon
     {

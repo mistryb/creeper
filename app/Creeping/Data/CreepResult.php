@@ -5,7 +5,7 @@ namespace App\Creeping\Data;
 use App\Enums\CreepOutcome;
 
 /**
- * What a driver hands back from one attempt at a target.
+ * What a driver hands back from one attempt at a page.
  */
 final readonly class CreepResult
 {

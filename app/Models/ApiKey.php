@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
  * One model API key on a user's keyring.
  *
  * Keys live here and nowhere else — there is no key in the environment for
- * Creeper to fall back on. Each target picks the key it spends, so a user can
+ * Creeper to fall back on. Each page picks the key it spends, so a user can
  * keep one key for the shopping they do on their own account and another for
  * work, and see which is which without ever seeing either again.
  *
@@ -30,7 +30,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $user
- * @property-read Collection<int, CreepTarget> $creepTargets
+ * @property-read Collection<int, WatchedPage> $watchedPages
  */
 #[Fillable(['name', 'provider', 'key', 'hint'])]
 #[Hidden(['key'])]
@@ -56,10 +56,10 @@ class ApiKey extends Model
         return $this->belongsTo(User::class);
     }
 
-    /** @return HasMany<CreepTarget, $this> */
-    public function creepTargets(): HasMany
+    /** @return HasMany<WatchedPage, $this> */
+    public function watchedPages(): HasMany
     {
-        return $this->hasMany(CreepTarget::class);
+        return $this->hasMany(WatchedPage::class);
     }
 
     /**

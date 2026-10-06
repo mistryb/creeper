@@ -1,113 +1,105 @@
 <?php
 
+use App\Enums\ChangeKind;
 use App\Enums\RunStatus;
 use App\Jobs\RunCreep;
+use App\Models\Competitor;
 use App\Models\CreepRun;
-use App\Models\CreepTarget;
+use App\Models\PageSnapshot;
 use App\Models\User;
+use App\Models\WatchedPage;
 use Illuminate\Support\Facades\Queue;
 
-it('creeps a target on demand', function () {
+it('creeps a page on demand', function () {
     Queue::fake();
 
     $user = User::factory()->create();
-    $target = CreepTarget::factory()->for($user)->create();
+    $watchedPage = WatchedPage::factory()->forUser($user)->create();
 
     $this->actingAs($user)
-        ->from(route('creep-targets.show', $target))
-        ->post(route('creep-targets.runs.store', $target))
-        ->assertRedirect(route('creep-targets.show', $target));
+        ->from(route('watched-pages.show', $watchedPage))
+        ->post(route('watched-pages.runs.store', $watchedPage))
+        ->assertRedirect(route('watched-pages.show', $watchedPage));
 
-    Queue::assertPushed(RunCreep::class, fn (RunCreep $job): bool => $job->target->is($target));
+    Queue::assertPushed(RunCreep::class, fn (RunCreep $job): bool => $job->watchedPage->is($watchedPage));
 });
 
 it('does not queue a second creep while one is in flight', function () {
     Queue::fake();
 
     $user = User::factory()->create();
-    $target = CreepTarget::factory()->for($user)->create();
-    CreepRun::factory()->running()->create(['creep_target_id' => $target->id]);
+    $watchedPage = WatchedPage::factory()->forUser($user)->create();
+    CreepRun::factory()->running()->create(['watched_page_id' => $watchedPage->id]);
 
     $this->actingAs($user)
-        ->from(route('creep-targets.show', $target))
-        ->post(route('creep-targets.runs.store', $target))
+        ->from(route('watched-pages.show', $watchedPage))
+        ->post(route('watched-pages.runs.store', $watchedPage))
         ->assertRedirect();
 
     Queue::assertNothingPushed();
 });
 
-it('will not let anyone creep somebody else\'s target', function () {
+it('will not let anyone creep somebody else\'s page', function () {
     Queue::fake();
 
-    $target = CreepTarget::factory()->create();
+    $watchedPage = WatchedPage::factory()->create();
 
     $this->actingAs(User::factory()->create())
-        ->post(route('creep-targets.runs.store', $target))
+        ->post(route('watched-pages.runs.store', $watchedPage))
         ->assertForbidden();
 
     Queue::assertNothingPushed();
 });
 
-it('shows a target with its history, runs and changes', function () {
+it('shows a page with its latest reading, runs and changes', function () {
     $user = User::factory()->create();
-    $target = CreepTarget::factory()->for($user)->create();
+    $watchedPage = WatchedPage::factory()->forUser($user)->create();
 
-    $first = $target->snapshots()->create([
-        'creep_run_id' => CreepRun::factory()->create(['creep_target_id' => $target->id])->id,
-        'title' => 'Kettle',
-        'price_amount' => 2499,
-        'currency' => 'GBP',
-        'captured_at' => now()->subDay(),
-    ]);
+    $first = PageSnapshot::factory()->of($watchedPage, ['Pro plan' => '$20/month'])->create(['captured_at' => now()->subDay()]);
+    $second = PageSnapshot::factory()->of($watchedPage, ['Pro plan' => '$25/month'])->create(['captured_at' => now()]);
 
-    $second = $target->snapshots()->create([
-        'creep_run_id' => CreepRun::factory()->create(['creep_target_id' => $target->id])->id,
-        'title' => 'Kettle',
-        'price_amount' => 1999,
-        'currency' => 'GBP',
-        'captured_at' => now(),
-    ]);
-
-    $target->changes()->create([
+    $watchedPage->changes()->create([
         'from_snapshot_id' => $first->id,
         'to_snapshot_id' => $second->id,
-        'field' => 'price',
-        'old_value' => '£24.99',
-        'new_value' => '£19.99',
-        'direction' => 'down',
+        'label' => 'Pro plan',
+        'old_value' => '$20/month',
+        'new_value' => '$25/month',
+        'kind' => ChangeKind::Changed,
         'detected_at' => now(),
     ]);
 
     $this->actingAs($user)
-        ->get(route('creep-targets.show', $target))
+        ->get(route('watched-pages.show', $watchedPage))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('creep-targets/show')
-            ->where('target.data.id', $target->id)
-            ->where('target.data.latest_snapshot.price_amount', 1999)
-            ->has('history.data', 2)
+            ->component('watched-pages/show')
+            ->where('watchedPage.data.id', $watchedPage->id)
+            ->where('watchedPage.data.latest_snapshot.facts.0.value', '$25/month')
+            ->where('watchedPage.data.watch_for', $watchedPage->watch_for)
             ->has('runs.data', 2)
             ->has('changes.data', 1)
             ->where('isCreeping', false)
         );
 });
 
-it('reports a target that is mid-creep so the button can wait', function () {
+it('reports a page that is mid-creep so the button can wait', function () {
     $user = User::factory()->create();
-    $target = CreepTarget::factory()->for($user)->create();
-    CreepRun::factory()->running()->create(['creep_target_id' => $target->id]);
+    $watchedPage = WatchedPage::factory()->forUser($user)->create();
+    CreepRun::factory()->running()->create(['watched_page_id' => $watchedPage->id]);
 
     $this->actingAs($user)
-        ->get(route('creep-targets.show', $target))
+        ->get(route('watched-pages.show', $watchedPage))
         ->assertInertia(fn ($page) => $page->where('isCreeping', true));
 });
 
-it('offers every schedule on the new target form', function () {
-    $this->actingAs(User::factory()->create())
-        ->get(route('creep-targets.create'))
+it('offers every schedule on the new page form', function () {
+    $competitor = Competitor::factory()->forUser($user = User::factory()->create())->create();
+
+    $this->actingAs($user)
+        ->get(route('competitors.watched-pages.create', $competitor))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('creep-targets/create')
+            ->component('watched-pages/create')
             ->has('frequencies', 4)
         );
 });

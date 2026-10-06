@@ -5,7 +5,10 @@ paths:
 
 # Creeping
 
-## A creep type is a whole instruction set, resolved off the enum
-`CreepType::instructions()` returns the `CreepInstructions` for a target: which agent reads the page, which `DigestProfile` it is shown, where the reading is filed, and what counts as a change. `LlmCreepDriver` and `CompleteCreepRun` never branch on type themselves — they ask the instructions. Adding a type means: an enum case, an `app/Creeping/Instructions/*Instructions.php`, an agent, a `DigestProfile`, a payload object, a snapshot table + model + factory, a detector, a resource, a `latest*Snapshot` relation on `CreepTarget`, and an entry in `resources/js/lib/creep-types.ts` (all screen copy lives there, not in the enum).
+## There is one reader, steered by the user's own words
+There are no creep types. Every watched page is read by `WatchedPageAgent` through `App\Creeping\WatchInstructions`, which owns the digest (`DigestProfile::page()`), the prompt, and filing the reading. What differs per page is `watched_pages.watch_for` — the user's description of what to watch, chosen from presets in `resources/js/lib/watch-presets.ts` or written freely — and it travels in the prompt, never in the agent's system instructions. Do not reintroduce a type enum or per-type snapshot tables to get a richer view of one kind of page; make the reader's facts better instead.
 
-Snapshots are per type; `creep_changes` is shared. Its `from_snapshot_id`/`to_snapshot_id` deliberately have no foreign keys — they point at whichever snapshot table the target's type uses. Do not "fix" that by constraining them to `product_snapshots` again.
+A reading is a `page_snapshots` row: a `summary` and `facts`, a list of `{label, value}`. Every payload, from the model or an HTTP agent, goes through `PagePayload::fromArray()` first.
+
+## Changes are facts compared by label, so labels must stay stable
+`FactDetector` lines two readings up by label (`PageSnapshot::key()`: case, spacing and trailing punctuation ignored) and reports added, removed or changed (`ChangeKind`). Values are compared ignoring case and spacing. A model that renames a label between runs produces a spurious removed + added pair, which is why `WatchInstructions::prompt()` hands it the labels from the latest reading and the agent is told to reuse them. Keep that section in the prompt.

@@ -15,6 +15,8 @@ export { CheckField, Field, FormActions } from './field';
 export { Meter } from './meter';
 export { Page } from './page';
 export { Panel, PanelBar } from './panel';
+export { Score } from './score';
 export { ReceiptRow, StatTile } from './stat-tile';
+export { Tally } from './tally';
 export { Changed, Emitted, Ok, Prompt, Terminal } from './terminal';
 export { Display, Eyebrow, SectionHeading } from './type';

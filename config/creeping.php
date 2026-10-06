@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | The driver that actually goes and does the creeping. "llm" reads the page
-    | here, with a model, using the key the target was given in the app. "http"
+    | here, with a model, using the key the page was given in the app. "http"
     | hands the URL to your own creeping agent. "fake" returns plausible
     | product data without leaving the machine, which is how to look around
     | without a key.
@@ -16,6 +16,26 @@ return [
     */
 
     'driver' => env('CREEP_DRIVER', 'llm'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Business Analysis
+    |--------------------------------------------------------------------------
+    |
+    | A one-off read of a business — its description, and its website when it
+    | has one — spent on the key picked when the run is started. The website is
+    | fetched with the same guarded fetcher the llm driver uses.
+    |
+    | `timeout` bounds the model call. It has to stay well inside the job's
+    | own timeout, which has to stay inside `retry_after` in config/queue.php.
+    |
+    */
+
+    'analysis' => [
+        'model' => env('CREEP_ANALYSIS_MODEL'),
+        'timeout' => (int) env('CREEP_ANALYSIS_TIMEOUT', 120),
+        'max_characters' => (int) env('CREEP_ANALYSIS_MAX_CHARACTERS', 12000),
+    ],
 
     'drivers' => [
 
@@ -33,7 +53,7 @@ return [
 
             /*
              * Keys are not configuration. Every key lives on a user's keyring
-             * in the app, and each target says which one it spends — there is
+             * in the app, and each page says which one it spends — there is
              * deliberately nothing to set here, so a key can never leak
              * through an environment file or an error page's config dump.
              *

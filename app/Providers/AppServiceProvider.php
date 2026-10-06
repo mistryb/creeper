@@ -4,8 +4,11 @@ namespace App\Providers;
 
 use App\Creeping\Contracts\CreepDriver;
 use App\Creeping\CreepManager;
+use App\Models\Business;
+use App\Models\Competitor;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
@@ -149,6 +152,13 @@ class AppServiceProvider extends ServiceProvider
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );
+
+        // Polymorphic rows store these names, not class names, so a class can
+        // be renamed without rewriting every analysis that points at it.
+        Relation::morphMap([
+            'business' => Business::class,
+            'competitor' => Competitor::class,
+        ]);
     }
 
     /**

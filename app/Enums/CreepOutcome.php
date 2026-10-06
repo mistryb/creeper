@@ -13,6 +13,6 @@ enum CreepOutcome: string
     /** The agent accepted the work and will post results to the callback later. */
     case Pending = 'pending';
 
-    /** The driver could not creep the target. */
+    /** The driver could not creep the page. */
     case Failed = 'failed';
 }

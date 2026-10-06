@@ -39,7 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     /*
      * The user's own keyring. Every model API key Creeper spends lives here —
-     * there is none in the environment — and each target picks the one it
+     * there is none in the environment — and each page picks the one it
      * spends. Writes are throttled because a key is a credential, and adding
      * or dropping them repeatedly is never a legitimate rhythm.
      */

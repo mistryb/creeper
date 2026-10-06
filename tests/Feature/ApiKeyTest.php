@@ -2,11 +2,11 @@
 
 use App\Creeping\CreepManager;
 use App\Enums\CreepProvider;
-use App\Enums\TargetStatus;
+use App\Enums\PageStatus;
 use App\Models\ApiKey;
 use App\Models\CreepRun;
-use App\Models\CreepTarget;
 use App\Models\User;
+use App\Models\WatchedPage;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -146,48 +146,48 @@ it('will not let somebody remove another user\'s key', function () {
     expect($key->fresh())->not->toBeNull();
 });
 
-it('pauses the targets a removed key was paying for', function () {
+it('pauses the pages a removed key was paying for', function () {
     $user = User::factory()->create();
     $key = ApiKey::factory()->for($user)->create();
 
-    $active = CreepTarget::factory()->for($user)->for($key)->create();
-    $parked = CreepTarget::factory()->failing()->for($user)->for($key)->create();
-    $untouched = CreepTarget::factory()->for($user)->create();
+    $active = WatchedPage::factory()->forUser($user)->for($key)->create();
+    $parked = WatchedPage::factory()->failing()->forUser($user)->for($key)->create();
+    $untouched = WatchedPage::factory()->forUser($user)->create();
 
     $this->actingAs($user)->delete(route('api-keys.destroy', $key));
 
-    expect($active->fresh()->status)->toBe(TargetStatus::Paused)
+    expect($active->fresh()->status)->toBe(PageStatus::Paused)
         ->and($active->fresh()->api_key_id)->toBeNull()
-        // A parked target stays parked: reviving it is a separate decision.
-        ->and($parked->fresh()->status)->toBe(TargetStatus::Failed)
-        ->and($untouched->fresh()->status)->toBe(TargetStatus::Active)
+        // A parked page stays parked: reviving it is a separate decision.
+        ->and($parked->fresh()->status)->toBe(PageStatus::Failed)
+        ->and($untouched->fresh()->status)->toBe(PageStatus::Active)
         ->and($untouched->fresh()->api_key_id)->not->toBeNull();
 });
 
-it('says how many targets a removal stopped', function () {
+it('says how many pages a removal stopped', function () {
     $user = User::factory()->create();
     $key = ApiKey::factory()->for($user)->create();
-    CreepTarget::factory()->count(2)->for($user)->for($key)->create();
+    WatchedPage::factory()->count(2)->forUser($user)->for($key)->create();
 
     $this->actingAs($user)
         ->delete(route('api-keys.destroy', $key))
         ->assertSessionHasNoErrors();
 
-    expect(session(SessionKey::FLASH_DATA)['toast']['message'])->toContain('2 targets');
+    expect(session(SessionKey::FLASH_DATA)['toast']['message'])->toContain('2 pages');
 });
 
-it('counts the targets each key is paying for', function () {
+it('counts the pages each key is paying for', function () {
     $user = User::factory()->create();
     $key = ApiKey::factory()->for($user)->create();
-    CreepTarget::factory()->count(2)->for($user)->for($key)->create();
+    WatchedPage::factory()->count(2)->forUser($user)->for($key)->create();
 
     $this->actingAs($user)
         ->get(route('api-keys.index'))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('keys.0.targets', 2));
+        ->assertInertia(fn ($page) => $page->where('keys.0.watchedPages', 2));
 });
 
-it('hands the target\'s key to the creeping agent', function () {
+it('hands the page\'s key to the creeping agent', function () {
     Http::preventStrayRequests();
     Http::fake(['agent.test/*' => Http::response(['title' => 'Kettle', 'price' => 24.99])]);
 
@@ -197,15 +197,15 @@ it('hands the target\'s key to the creeping agent', function () {
     ]);
 
     $key = ApiKey::factory()->value('sk-ant-api03-secret-value-abcd')->create();
-    $target = CreepTarget::factory()->for($key->user)->for($key)->create();
-    $run = CreepRun::factory()->running()->for($target, 'target')->create();
+    $watchedPage = WatchedPage::factory()->forUser($key->user)->for($key)->create();
+    $run = CreepRun::factory()->running()->for($watchedPage, 'watchedPage')->create();
 
     app(CreepManager::class)->driver('http')->creep($run);
 
     Http::assertSent(fn (Request $request): bool => $request['api_key'] === 'sk-ant-api03-secret-value-abcd');
 });
 
-it('sends no key at all when the target has none', function () {
+it('sends no key at all when the page has none', function () {
     Http::preventStrayRequests();
     Http::fake(['agent.test/*' => Http::response(['title' => 'Kettle', 'price' => 24.99])]);
 
@@ -214,7 +214,7 @@ it('sends no key at all when the target has none', function () {
         'creeping.drivers.http.endpoint' => 'https://agent.test/creep',
     ]);
 
-    $run = CreepRun::factory()->running()->for(CreepTarget::factory()->keyless(), 'target')->create();
+    $run = CreepRun::factory()->running()->for(WatchedPage::factory()->keyless(), 'watchedPage')->create();
 
     app(CreepManager::class)->driver('http')->creep($run);
 

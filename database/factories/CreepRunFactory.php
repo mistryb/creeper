@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\RunStatus;
 use App\Models\CreepRun;
-use App\Models\CreepTarget;
+use App\Models\WatchedPage;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -21,7 +21,7 @@ class CreepRunFactory extends Factory
         $startedAt = Carbon::now()->subMinutes(fake()->numberBetween(1, 10_000));
 
         return [
-            'creep_target_id' => CreepTarget::factory(),
+            'watched_page_id' => WatchedPage::factory(),
             'status' => RunStatus::Succeeded,
             'driver' => 'fake',
             'started_at' => $startedAt,

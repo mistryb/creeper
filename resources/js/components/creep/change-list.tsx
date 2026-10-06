@@ -1,23 +1,26 @@
 import { Link } from '@inertiajs/react';
-import { ArrowDownRight, ArrowUpRight, Repeat } from 'lucide-react';
+import { CircleMinus, CirclePlus, Repeat } from 'lucide-react';
 import { EmptyLine } from '@/components/ds';
 import { formatRelative } from '@/lib/format';
-import { show } from '@/routes/creep-targets';
+import { show } from '@/routes/watched-pages';
 import type { CreepChange } from '@/types';
 
 /**
- * The log of what moved. Direction gets an arrow and a label as well as a
- * ribbon colour: down is the good news for a price watcher, so it reads green.
+ * The log of what moved. Each kind of change gets an icon and a label as well
+ * as a ribbon colour: something new is green, something gone is red, a value
+ * that moved wants attention.
  */
 export function ChangeList({
     changes,
-    showTarget = false,
+    showPage = false,
+    emptyMessage = 'Nothing has changed yet',
 }: {
     changes: CreepChange[];
-    showTarget?: boolean;
+    showPage?: boolean;
+    emptyMessage?: string;
 }) {
     if (changes.length === 0) {
-        return <EmptyLine>Nothing has changed yet</EmptyLine>;
+        return <EmptyLine>{emptyMessage}</EmptyLine>;
     }
 
     return (
@@ -27,19 +30,30 @@ export function ChangeList({
                     key={change.id}
                     className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0"
                 >
-                    <DirectionIcon direction={change.direction} />
+                    <KindIcon kind={change.kind} label={change.kind_label} />
 
                     <div className="min-w-0 flex-1">
                         <p className="text-sm">{change.description}</p>
                         <p className="mt-0.5 font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
-                            {showTarget && change.target && (
+                            {showPage && change.watched_page && (
                                 <>
+                                    {change.watched_page.competitor && (
+                                        <>
+                                            {
+                                                change.watched_page.competitor
+                                                    .name
+                                            }
+                                            <span aria-hidden> · </span>
+                                        </>
+                                    )}
                                     <Link
-                                        href={show(change.target.id)}
+                                        href={show(change.watched_page.id)}
                                         className="underline decoration-rule underline-offset-2 hover:text-foreground hover:decoration-ribbon"
                                     >
-                                        {change.target.display_name}
+                                        {change.watched_page.display_name}
                                     </Link>
+                                    <span aria-hidden> · </span>
+                                    {change.watched_page.category_label.toLowerCase()}
                                     <span aria-hidden> · </span>
                                 </>
                             )}
@@ -52,29 +66,23 @@ export function ChangeList({
     );
 }
 
-function DirectionIcon({ direction }: { direction: CreepChange['direction'] }) {
-    if (direction === 'down') {
-        return (
-            <ArrowDownRight
-                aria-label="Decreased"
-                className="mt-0.5 size-4 shrink-0 text-ribbon"
-            />
-        );
-    }
-
-    if (direction === 'up') {
-        return (
-            <ArrowUpRight
-                aria-label="Increased"
-                className="mt-0.5 size-4 shrink-0 text-ribbon-red"
-            />
-        );
-    }
+function KindIcon({
+    kind,
+    label,
+}: {
+    kind: CreepChange['kind'];
+    label: string;
+}) {
+    const Icon = { added: CirclePlus, removed: CircleMinus, changed: Repeat }[
+        kind
+    ];
+    const tone = {
+        added: 'text-ribbon',
+        removed: 'text-ribbon-red',
+        changed: 'text-ribbon-amber',
+    }[kind];
 
     return (
-        <Repeat
-            aria-label="Changed"
-            className="mt-0.5 size-4 shrink-0 text-ribbon-amber"
-        />
+        <Icon aria-label={label} className={`mt-0.5 size-4 shrink-0 ${tone}`} />
     );
 }

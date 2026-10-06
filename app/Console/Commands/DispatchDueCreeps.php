@@ -3,31 +3,30 @@
 namespace App\Console\Commands;
 
 use App\Jobs\RunCreep;
-use App\Models\CreepTarget;
+use App\Models\WatchedPage;
 use Illuminate\Console\Command;
 
 /**
- * Queues every target whose next creep is due.
+ * Queues every page whose next creep is due.
  *
- * Runs every minute. `RunCreep` is unique per target, so a target still being
+ * Runs every minute. `RunCreep` is unique per page, so a page still being
  * crept from a previous sweep is simply skipped.
  */
 class DispatchDueCreeps extends Command
 {
     protected $signature = 'creeper:dispatch-due';
 
-    protected $description = 'Dispatch a creep for every target that is due';
+    protected $description = 'Dispatch a creep for every page that is due';
 
     public function handle(): int
     {
         $dispatched = 0;
 
-        CreepTarget::query()
+        WatchedPage::query()
             ->due()
-            ->with('user')
-            ->chunkById(100, function ($targets) use (&$dispatched): void {
-                foreach ($targets as $target) {
-                    RunCreep::dispatch($target);
+            ->chunkById(100, function ($watchedPages) use (&$dispatched): void {
+                foreach ($watchedPages as $watchedPage) {
+                    RunCreep::dispatch($watchedPage);
                     $dispatched++;
                 }
             });

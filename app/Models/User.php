@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -22,9 +23,11 @@ use Illuminate\Support\Str;
  * @property string|null $pending_email An address awaiting confirmation by code.
  * @property string|null $password Retired. Sign-in is by one-time code.
  * @property string|null $remember_token
+ * @property int|null $current_business_id The business picked in the sidebar chooser.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Collection<int, CreepTarget> $creepTargets
+ * @property-read Collection<int, Business> $businesses
+ * @property-read Business|null $currentBusiness
  * @property-read Collection<int, ApiKey> $apiKeys
  */
 #[Fillable(['name', 'email'])]
@@ -33,6 +36,17 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * Businesses go by database cascade, which fires no model events, so
+     * they are deleted one by one first — each takes its analyses with it.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            $user->businesses()->get()->each->delete();
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -100,10 +114,47 @@ class User extends Authenticatable
             : Str::limit($words->implode(' '), 255, '');
     }
 
-    /** @return HasMany<CreepTarget, $this> */
-    public function creepTargets(): HasMany
+    /**
+     * The businesses this account watches competitors for, in the order they
+     * were set up.
+     *
+     * @return HasMany<Business, $this>
+     */
+    public function businesses(): HasMany
     {
-        return $this->hasMany(CreepTarget::class);
+        return $this->hasMany(Business::class)->orderBy('id');
+    }
+
+    /**
+     * The business last picked in the sidebar chooser. Null until one has
+     * been picked, or once the picked one has been deleted — use
+     * {@see selectedBusiness()} for the one the app should show.
+     *
+     * @return BelongsTo<Business, $this>
+     */
+    public function currentBusiness(): BelongsTo
+    {
+        return $this->belongsTo(Business::class, 'current_business_id');
+    }
+
+    /**
+     * The business the app is working on: the one picked in the chooser, or
+     * the first one set up when nothing has been picked. Null only for an
+     * account with no businesses at all.
+     */
+    public function selectedBusiness(): ?Business
+    {
+        return $this->currentBusiness ?? $this->businesses()->first();
+    }
+
+    /**
+     * Make a business the one the app is working on.
+     */
+    public function switchBusiness(Business $business): void
+    {
+        $this->forceFill(['current_business_id' => $business->id])->save();
+
+        $this->setRelation('currentBusiness', $business);
     }
 
     /**

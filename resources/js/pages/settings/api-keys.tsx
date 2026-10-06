@@ -44,7 +44,7 @@ export default function ApiKeys({ keys, providers }: Props) {
                     as="h2"
                     size="sm"
                     title="API keys"
-                    description="Creeper reads pages with your keys, so you pay your model provider directly. Add as many as you like — each target says which one it spends."
+                    description="Creeper reads pages with your keys, so you pay your model provider directly. Add as many as you like — each watched page says which one it spends."
                 />
 
                 <div className="border border-rule bg-card shadow-xs">
@@ -62,9 +62,9 @@ export default function ApiKeys({ keys, providers }: Props) {
                                         <p className="mt-1 font-mono text-xs text-muted-foreground tabular-nums">
                                             {key.providerLabel} · ••••••••
                                             {key.hint} ·{' '}
-                                            {key.targets === 1
-                                                ? '1 target'
-                                                : `${key.targets} targets`}
+                                            {key.watchedPages === 1
+                                                ? '1 watched page'
+                                                : `${key.watchedPages} watchedPages`}
                                         </p>
                                     </div>
 
@@ -93,8 +93,8 @@ export default function ApiKeys({ keys, providers }: Props) {
 
                 {keys.length > 0 && (
                     <p className="text-xs text-muted-foreground">
-                        Removing a key pauses every target that was being crept
-                        with it, so nothing fails quietly while you find
+                        Removing a key pauses every watched page that was being
+                        crept with it, so nothing fails quietly while you find
                         another.
                     </p>
                 )}
@@ -111,7 +111,7 @@ export default function ApiKeys({ keys, providers }: Props) {
                                 label="Name"
                                 htmlFor="name"
                                 error={errors.name}
-                                hint="What you'll see when picking a key for a target."
+                                hint="What you'll see when picking a key for a watched page."
                             >
                                 <Input
                                     id="name"

@@ -65,3 +65,43 @@ it('offers no sign-in link in the marketing chrome', function () {
         ->not->toContain('Log in')
         ->not->toContain('login');
 });
+
+/*
+ * Creeper is pitched as a competitor watcher, not a general page watcher.
+ * Asserted against the source for the same reason as the chrome above: the
+ * React page is never rendered by the test suite.
+ */
+it('pitches the landing page as a competitor watcher', function () {
+    $page = file_get_contents(resource_path('js/pages/welcome.tsx'));
+
+    expect($page)
+        ->toContain('Competitor watcher')
+        ->toContain('Keep tabs on your competitors')
+        ->not->toContain('Put a page on watch');
+});
+
+it('has no sign-up call to action in the landing page hero', function () {
+    $page = file_get_contents(resource_path('js/pages/welcome.tsx'));
+
+    expect($page)
+        ->not->toContain('Creep it')
+        ->not->toContain('<form');
+});
+
+it('links to the repository with a github button instead of a run option card', function () {
+    $page = file_get_contents(resource_path('js/pages/welcome.tsx'));
+
+    expect($page)
+        ->toContain('View on GitHub')
+        ->toContain('<Cloud aria-hidden="true" />')
+        ->toContain('href={REPOSITORY_URL}')
+        ->not->toContain('Read the source')
+        ->not->toContain('Put it on Laravel Cloud');
+});
+
+it('offers the github and laravel cloud buttons in the hero and at the foot of the page', function () {
+    $page = file_get_contents(resource_path('js/pages/welcome.tsx'));
+
+    expect(substr_count($page, 'Deploy on Laravel Cloud'))->toBe(1)
+        ->and(substr_count($page, '<RunButtons '))->toBe(2);
+});

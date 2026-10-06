@@ -6,7 +6,7 @@ use App\Enums\CreepOutcome;
 use App\Enums\RunStatus;
 use App\Jobs\RunCreep;
 use App\Models\CreepRun;
-use App\Models\CreepTarget;
+use App\Models\WatchedPage;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -27,8 +27,8 @@ function httpDriver(): CreepDriver
     return app(CreepManager::class)->driver('http');
 }
 
-it('sends the target and a signed callback URL to the agent', function () {
-    Http::fake(['agent.test/*' => Http::response(['title' => 'Kettle', 'price' => 24.99])]);
+it('sends the page and a signed callback URL to the agent', function () {
+    Http::fake(['agent.test/*' => Http::response(['summary' => 'Pro is $20.', 'facts' => [['label' => 'Pro plan', 'value' => '$20']]])]);
 
     $run = CreepRun::factory()->running()->create();
 
@@ -39,8 +39,11 @@ it('sends the target and a signed callback URL to the agent', function () {
 
         return $request->url() === 'https://agent.test/creep'
             && $request['run_id'] === $run->id
-            && $request['url'] === $run->target->url
-            && $request['type'] === 'product'
+            && $request['watched_page_id'] === $run->watchedPage->id
+            // Kept under its old name for agents written before watched pages.
+            && $request['target_id'] === $run->watchedPage->id
+            && $request['url'] === $run->watchedPage->url
+            && $request['watch_for'] === $run->watchedPage->watch_for
             && str_contains((string) $request['callback_url'], '/webhooks/creep/'.$run->id)
             && str_contains((string) $request['callback_url'], 'signature=');
     });
@@ -48,40 +51,40 @@ it('sends the target and a signed callback URL to the agent', function () {
 
 it('completes the run when the agent answers straight away', function () {
     Http::fake(['agent.test/*' => Http::response([
-        'title' => 'Stainless Kettle',
-        'price' => '£24.99',
-        'availability' => 'in_stock',
+        'summary' => 'Pro is $20 a month.',
+        'facts' => ['Pro plan' => '$20/month'],
     ])]);
 
-    $target = CreepTarget::factory()->create();
+    $watchedPage = WatchedPage::factory()->create();
 
-    RunCreep::dispatchSync($target);
+    RunCreep::dispatchSync($watchedPage);
 
-    $run = $target->runs()->sole();
+    $run = $watchedPage->runs()->sole();
 
     expect($run->status)->toBe(RunStatus::Succeeded)
         ->and($run->driver)->toBe('http')
-        ->and($target->snapshots()->sole()->price_amount)->toBe(2499);
+        // A plain label => value map is accepted as readily as a list.
+        ->and($watchedPage->snapshots()->sole()->facts)->toBe([['label' => 'Pro plan', 'value' => '$20/month']]);
 });
 
 it('leaves the run open when the agent accepts the work for later', function () {
     Http::fake(['agent.test/*' => Http::response(null, 202)]);
 
-    $target = CreepTarget::factory()->due()->create();
+    $watchedPage = WatchedPage::factory()->due()->create();
 
-    RunCreep::dispatchSync($target);
+    RunCreep::dispatchSync($watchedPage);
 
-    $run = $target->runs()->sole();
-    $target->refresh();
+    $run = $watchedPage->runs()->sole();
+    $watchedPage->refresh();
 
     expect($run->status)->toBe(RunStatus::Running)
-        ->and($target->snapshots()->count())->toBe(0)
+        ->and($watchedPage->snapshots()->count())->toBe(0)
         // The schedule still moves on, so the sweeper doesn't pile up
         // duplicate work while the agent is thinking.
-        ->and($target->next_creep_at?->isFuture())->toBeTrue();
+        ->and($watchedPage->next_creep_at?->isFuture())->toBeTrue();
 });
 
-it('gives up on a target the agent rejects', function () {
+it('gives up on a page the agent rejects', function () {
     Http::fake(['agent.test/*' => Http::response(['error' => 'Not a product page'], 422)]);
 
     $run = CreepRun::factory()->running()->create();
@@ -101,15 +104,15 @@ it('throws when the agent itself is broken, so the queue retries', function () {
 it('records the attempt as failed before letting the exception through', function () {
     Http::fake(['agent.test/*' => Http::response('', 503)]);
 
-    $target = CreepTarget::factory()->create();
+    $watchedPage = WatchedPage::factory()->create();
 
     try {
-        RunCreep::dispatchSync($target);
+        RunCreep::dispatchSync($watchedPage);
     } catch (RequestException) {
         // The queue would retry; here we only care what was written down.
     }
 
-    $run = $target->runs()->sole();
+    $run = $watchedPage->runs()->sole();
 
     expect($run->status)->toBe(RunStatus::Failed)
         ->and($run->error)->not->toBeNull();

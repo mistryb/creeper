@@ -8,9 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * A stored reading, and the news in it.
  *
- * Snapshots are typed per creep type — a product snapshot and a changelog
- * snapshot have almost nothing in common — so the shared pipeline holds them
- * as models and only ever hands them back to the type that made them.
+ * The snapshot this creep produced, and the changes it revealed against the
+ * one before it.
  */
 final readonly class Reading
 {

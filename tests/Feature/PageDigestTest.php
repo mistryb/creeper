@@ -1,6 +1,5 @@
 <?php
 
-use App\Creeping\Fetching\DigestProfile;
 use App\Creeping\Fetching\PageDigest;
 
 it('prefers a JSON-LD product block, and keeps it first', function () {
@@ -205,30 +204,19 @@ function changelogHtml(): string
         HTML;
 }
 
-it('keeps the release headings that a product digest throws away', function () {
-    $product = PageDigest::fromHtml(changelogHtml(), 12000)->toPrompt('https://widgets.test/changelog');
-    $changelog = PageDigest::fromHtml(changelogHtml(), 12000, DigestProfile::changelog())
-        ->toPrompt('https://widgets.test/changelog');
+it('keeps the release headings in the entry\'s own header', function () {
+    $prompt = PageDigest::fromHtml(changelogHtml(), 12000)->toPrompt('https://widgets.test/changelog');
 
-    // A shop page keeps nothing in a `header`, so the version goes with it.
-    expect($product)->not->toContain('v2.4.0')
-        ->and($changelog)->toContain('v2.4.0')
-        ->and($changelog)->toContain('14 March 2026')
-        ->and($changelog)->toContain('Bulk export for reports');
+    // A release very often carries its version and date in a `header`, so the
+    // digest keeps it rather than culling it as page furniture.
+    expect($prompt)->toContain('v2.4.0')
+        ->and($prompt)->toContain('14 March 2026')
+        ->and($prompt)->toContain('Bulk export for reports');
 });
 
 it('still throws away the furniture around a changelog', function () {
-    $prompt = PageDigest::fromHtml(changelogHtml(), 12000, DigestProfile::changelog())
-        ->toPrompt('https://widgets.test/changelog');
+    $prompt = PageDigest::fromHtml(changelogHtml(), 12000)->toPrompt('https://widgets.test/changelog');
 
     expect($prompt)->not->toContain('Docs · Pricing')
         ->and($prompt)->not->toContain('© Widgets');
-});
-
-it('spends nothing on schema.org data for a changelog', function () {
-    $digest = PageDigest::fromHtml(changelogHtml(), 12000, DigestProfile::changelog());
-
-    expect($digest->structuredData)->toBe([])
-        // The metadata worth having survives.
-        ->and($digest->meta['og:description'])->toBe('Everything we have shipped.');
 });

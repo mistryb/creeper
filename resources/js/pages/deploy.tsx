@@ -58,7 +58,7 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
                                     code, so mail has to work — ask me for
                                     the credentials
    There is deliberately no model API key here: keys are added inside the
-   app, under Settings → API keys, and each target picks the one it spends.
+   app, under Settings → API keys, and each watched page picks the one it spends.
    Use CREEP_DRIVER=fake instead if I tell you I want to look around before
    paying for a model.
 
@@ -224,7 +224,7 @@ export default function Deploy() {
 
                         <AgentStep step="04" heading="Start the two workers">
                             A queue worker does the creeping and the scheduler
-                            decides when a target is due. Both have to be
+                            decides when a watched page is due. Both have to be
                             running, or you get a site that looks perfectly fine
                             and never checks a page.
                         </AgentStep>

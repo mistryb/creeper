@@ -12,10 +12,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
- * One attempt to creep a target.
+ * One attempt to creep a page.
  *
  * @property int $id
- * @property int $creep_target_id
+ * @property int $watched_page_id
  * @property RunStatus $status
  * @property string $driver
  * @property Carbon|null $started_at
@@ -25,11 +25,10 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $raw_payload
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read CreepTarget $target
- * @property-read ProductSnapshot|null $snapshot
- * @property-read ChangelogSnapshot|null $changelogSnapshot
+ * @property-read WatchedPage $watchedPage
+ * @property-read PageSnapshot|null $snapshot
  */
-#[Fillable(['creep_target_id', 'status', 'driver', 'started_at', 'finished_at', 'duration_ms', 'error', 'raw_payload'])]
+#[Fillable(['watched_page_id', 'status', 'driver', 'started_at', 'finished_at', 'duration_ms', 'error', 'raw_payload'])]
 class CreepRun extends Model
 {
     /** @use HasFactory<CreepRunFactory> */
@@ -49,30 +48,20 @@ class CreepRun extends Model
         ];
     }
 
-    /** @return BelongsTo<CreepTarget, $this> */
-    public function target(): BelongsTo
+    /** @return BelongsTo<WatchedPage, $this> */
+    public function watchedPage(): BelongsTo
     {
-        return $this->belongsTo(CreepTarget::class, 'creep_target_id');
+        return $this->belongsTo(WatchedPage::class, 'watched_page_id');
     }
 
     /**
-     * The reading a product creep produced.
+     * The reading this run produced, if it succeeded.
      *
-     * @return HasOne<ProductSnapshot, $this>
+     * @return HasOne<PageSnapshot, $this>
      */
     public function snapshot(): HasOne
     {
-        return $this->hasOne(ProductSnapshot::class);
-    }
-
-    /**
-     * The reading a changelog creep produced.
-     *
-     * @return HasOne<ChangelogSnapshot, $this>
-     */
-    public function changelogSnapshot(): HasOne
-    {
-        return $this->hasOne(ChangelogSnapshot::class);
+        return $this->hasOne(PageSnapshot::class);
     }
 
     /**

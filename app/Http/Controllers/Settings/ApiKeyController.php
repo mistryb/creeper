@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Enums\CreepProvider;
-use App\Enums\TargetStatus;
+use App\Enums\PageStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\CreepTargetController;
+use App\Http\Controllers\WatchedPageController;
 use App\Models\ApiKey;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,8 +21,8 @@ use Inertia\Response;
  * it was given, its provider and its last four characters, and the only edits
  * available are adding another or removing one.
  *
- * Which key a creep spends is the target's business, not this screen's: see
- * {@see CreepTargetController}.
+ * Which key a creep spends is the page's business, not this screen's: see
+ * {@see WatchedPageController}.
  */
 class ApiKeyController extends Controller
 {
@@ -59,9 +59,9 @@ class ApiKeyController extends Controller
     /**
      * Remove a key, and stop whatever it was paying for.
      *
-     * The targets that spent it are left in place but paused: their runs would
+     * The pages that spent it are left in place but paused: their runs would
      * only fail until somebody picked another key, and a failing run still
-     * counts towards the failure limit that parks a target for good. Targets
+     * counts towards the failure limit that parks a page for good. Pages
      * already parked are left alone, so that resuming one does not quietly
      * become an unrelated recovery.
      */
@@ -71,8 +71,8 @@ class ApiKeyController extends Controller
 
         $paused = 0;
 
-        foreach ($apiKey->creepTargets()->where('status', TargetStatus::Active)->get() as $target) {
-            $target->pause();
+        foreach ($apiKey->watchedPages()->where('status', PageStatus::Active)->get() as $watchedPage) {
+            $watchedPage->pause();
             $paused++;
         }
 
@@ -82,7 +82,7 @@ class ApiKeyController extends Controller
             'type' => 'success',
             'message' => $paused === 0
                 ? __('API key removed.')
-                : trans_choice('API key removed. :count target has been paused until you give it another key.|API key removed. :count targets have been paused until you give them another key.', $paused, ['count' => $paused]),
+                : trans_choice('API key removed. :count page has been paused until you give it another key.|API key removed. :count pages have been paused until you give them another key.', $paused, ['count' => $paused]),
         ]);
 
         return back();
@@ -98,7 +98,7 @@ class ApiKeyController extends Controller
     {
         return $request->user()
             ->apiKeys()
-            ->withCount('creepTargets')
+            ->withCount('watchedPages')
             ->get()
             ->map(fn (ApiKey $key): array => [
                 'id' => $key->id,
@@ -106,7 +106,7 @@ class ApiKeyController extends Controller
                 'provider' => $key->provider->value,
                 'providerLabel' => $key->provider->label(),
                 'hint' => $key->hint,
-                'targets' => $key->creep_targets_count,
+                'watchedPages' => $key->watched_pages_count,
                 'created_at' => $key->created_at?->toIso8601String(),
             ])
             ->all();

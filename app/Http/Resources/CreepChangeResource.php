@@ -18,13 +18,14 @@ class CreepChangeResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'field' => $this->field,
+            'label' => $this->label,
             'old_value' => $this->old_value,
             'new_value' => $this->new_value,
-            'direction' => $this->direction->value,
+            'kind' => $this->kind->value,
+            'kind_label' => $this->kind->label(),
             'description' => $this->describe(),
             'detected_at' => $this->detected_at->toIso8601String(),
-            'target' => CreepTargetResource::make($this->whenLoaded('target')),
+            'watched_page' => WatchedPageResource::make($this->whenLoaded('watchedPage')),
         ];
     }
 }
