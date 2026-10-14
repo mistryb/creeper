@@ -140,3 +140,25 @@ it('offers signed-out visitors a log in pill in the homepage tab bar', function 
         ->toContain('href={login()}')
         ->toContain('Log in');
 });
+
+/*
+ * Link previews on Twitter/X, Slack and iMessage come from the server-rendered
+ * shell — their crawlers never run the React app — so the tags are asserted on
+ * the raw response.
+ */
+it('unfurls into a large image card when the landing page is shared', function () {
+    config(['marketing.enabled' => true]);
+
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertSee('<meta name="twitter:card" content="summary_large_image">', escape: false)
+        ->assertSee('<meta property="og:image" content="'.asset('og-image.png').'">', escape: false)
+        ->assertSee('<meta property="og:title"', escape: false)
+        ->assertSee('<meta name="twitter:image:alt"', escape: false);
+});
+
+it('ships a share image at the size the cards crop to', function () {
+    [$width, $height] = getimagesize(public_path('og-image.png'));
+
+    expect([$width, $height])->toBe([1200, 630]);
+});
