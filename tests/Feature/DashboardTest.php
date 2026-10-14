@@ -1,27 +1,43 @@
 <?php
 
-namespace Tests\Feature;
-
+use App\Models\Business;
+use App\Models\Competitor;
+use App\Models\CompetitorDiscovery;
+use App\Models\Digest;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Database\Factories\DigestFactory;
 
-class DashboardTest extends TestCase
-{
-    use RefreshDatabase;
+it('sends guests to log in', function () {
+    $this->get(route('dashboard'))->assertRedirect(route('login'));
+});
 
-    public function test_guests_are_redirected_to_the_login_page()
-    {
-        $response = $this->get(route('dashboard'));
-        $response->assertRedirect(route('login'));
-    }
+it('shows an account with no company the way in', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('dashboard')->where('business', null));
+});
 
-    public function test_authenticated_users_can_visit_the_dashboard()
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+it('shows the chosen company, its competitors, and the latest digest', function () {
+    $business = Business::factory()->withKey()->create();
+    $competitor = Competitor::factory()->for($business)->discovered()->create();
+    Digest::factory()->for($business)->create(['report' => DigestFactory::report([$competitor])]);
+    $failed = Digest::factory()->for($business)->failed()->create();
+    CompetitorDiscovery::factory()->for($business)->queued()->create();
 
-        $response = $this->get(route('dashboard'));
-        $response->assertOk();
-    }
-}
+    $this->actingAs($business->user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->where('business.data.id', $business->id)
+            ->where('business.data.api_key_label', $business->apiKey->label())
+            ->has('competitors.data', 1)
+            ->where('competitors.data.0.reason', $competitor->reason)
+            ->where('digest.data.report.headline', 'Prices went up across the board this week.')
+            ->where('latestDigestRun.data.id', $failed->id)
+            ->where('isDigesting', false)
+            ->where('isDiscovering', true)
+            ->where('hasApiKeys', true)
+        );
+});

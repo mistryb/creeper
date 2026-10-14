@@ -71,13 +71,14 @@ it('offers no sign-in link in the marketing chrome', function () {
  * Asserted against the source for the same reason as the chrome above: the
  * React page is never rendered by the test suite.
  */
-it('pitches the landing page as a competitor watcher', function () {
+it('pitches the landing page as a competitor digest', function () {
     $page = file_get_contents(resource_path('js/pages/welcome.tsx'));
 
     expect($page)
-        ->toContain('Competitor watcher')
-        ->toContain('Keep tabs on your competitors')
-        ->not->toContain('Put a page on watch');
+        ->toContain('Competitor digest')
+        ->toContain('Know what your rivals')
+        ->not->toContain('Put a page on watch')
+        ->not->toContain('watched page');
 });
 
 it('has no sign-up call to action in the landing page hero', function () {

@@ -6,7 +6,6 @@ use App\Http\Requests\StoreCompetitorRequest;
 use App\Http\Requests\UpdateCompetitorRequest;
 use App\Http\Resources\BusinessResource;
 use App\Http\Resources\CompetitorResource;
-use App\Http\Resources\WatchedPageResource;
 use App\Models\Business;
 use App\Models\Competitor;
 use Illuminate\Http\RedirectResponse;
@@ -24,9 +23,7 @@ class CompetitorController extends Controller
 
         return Inertia::render('competitors/index', [
             'business' => BusinessResource::make($business),
-            'competitors' => CompetitorResource::collection(
-                $business->competitors()->withCount('watchedPages')->get()
-            ),
+            'competitors' => CompetitorResource::collection($business->competitors()->get()),
         ]);
     }
 
@@ -49,15 +46,15 @@ class CompetitorController extends Controller
     {
         $this->authorize('update', $business);
 
-        $competitor = $business->competitors()->create($request->validated());
+        $business->competitors()->create($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Competitor added.')]);
 
-        return to_route('competitors.show', $competitor);
+        return to_route('dashboard');
     }
 
     /**
-     * One competitor: who they are, and the pages of theirs being watched.
+     * One competitor: who they are, and the form for changing it.
      */
     public function show(Competitor $competitor): Response
     {
@@ -66,12 +63,6 @@ class CompetitorController extends Controller
         return Inertia::render('competitors/show', [
             'business' => BusinessResource::make($competitor->business),
             'competitor' => CompetitorResource::make($competitor),
-            'watchedPages' => WatchedPageResource::collection(
-                $competitor->watchedPages()
-                    ->with(['latestSnapshot', 'latestRun'])
-                    ->latest()
-                    ->get()
-            ),
         ]);
     }
 
@@ -90,7 +81,7 @@ class CompetitorController extends Controller
     }
 
     /**
-     * Stop watching a competitor, and forget everything found about them.
+     * Drop a competitor from the digest.
      */
     public function destroy(Competitor $competitor): RedirectResponse
     {

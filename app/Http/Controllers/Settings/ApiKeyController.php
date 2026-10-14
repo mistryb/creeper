@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Enums\CreepProvider;
-use App\Enums\PageStatus;
+use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\WatchedPageController;
 use App\Models\ApiKey;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,8 +20,8 @@ use Inertia\Response;
  * it was given, its provider and its last four characters, and the only edits
  * available are adding another or removing one.
  *
- * Which key a creep spends is the page's business, not this screen's: see
- * {@see WatchedPageController}.
+ * Which key a digest spends is the company's business, not this screen's:
+ * see {@see BusinessController}.
  */
 class ApiKeyController extends Controller
 {
@@ -57,32 +56,26 @@ class ApiKeyController extends Controller
     }
 
     /**
-     * Remove a key, and stop whatever it was paying for.
+     * Remove a key, and say who it was paying for.
      *
-     * The pages that spent it are left in place but paused: their runs would
-     * only fail until somebody picked another key, and a failing run still
-     * counts towards the failure limit that parks a page for good. Pages
-     * already parked are left alone, so that resuming one does not quietly
-     * become an unrelated recovery.
+     * The companies that spent it are left in place with no key — the
+     * database nulls it — and their digests fail, saying so, until another
+     * key is picked for them. The toast names how many, so that is not a
+     * surprise next Monday.
      */
     public function destroy(Request $request, ApiKey $apiKey): RedirectResponse
     {
         $this->authorize('delete', $apiKey);
 
-        $paused = 0;
-
-        foreach ($apiKey->watchedPages()->where('status', PageStatus::Active)->get() as $watchedPage) {
-            $watchedPage->pause();
-            $paused++;
-        }
+        $orphaned = $apiKey->businesses()->count();
 
         $apiKey->delete();
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $paused === 0
+            'message' => $orphaned === 0
                 ? __('API key removed.')
-                : trans_choice('API key removed. :count page has been paused until you give it another key.|API key removed. :count pages have been paused until you give them another key.', $paused, ['count' => $paused]),
+                : trans_choice('API key removed. :count company needs another key before its next digest.|API key removed. :count companies need another key before their next digest.', $orphaned, ['count' => $orphaned]),
         ]);
 
         return back();
@@ -98,7 +91,7 @@ class ApiKeyController extends Controller
     {
         return $request->user()
             ->apiKeys()
-            ->withCount('watchedPages')
+            ->withCount('businesses')
             ->get()
             ->map(fn (ApiKey $key): array => [
                 'id' => $key->id,
@@ -106,7 +99,7 @@ class ApiKeyController extends Controller
                 'provider' => $key->provider->value,
                 'providerLabel' => $key->provider->label(),
                 'hint' => $key->hint,
-                'watchedPages' => $key->watched_pages_count,
+                'businesses' => $key->businesses_count,
                 'created_at' => $key->created_at?->toIso8601String(),
             ])
             ->all();

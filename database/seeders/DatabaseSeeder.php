@@ -2,17 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Creeping\WatchInstructions;
-use App\Enums\CreepFrequency;
-use App\Enums\PageCategory;
-use App\Enums\RunStatus;
 use App\Models\Business;
 use App\Models\Competitor;
-use App\Models\CreepChange;
-use App\Models\CreepRun;
-use App\Models\LandscapeAnalysis;
+use App\Models\Digest;
 use App\Models\User;
-use App\Models\WatchedPage;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -24,11 +17,9 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      *
-     * Gives a fresh install something to look at: a business with two
-     * competitors, a pricing page and a changelog each read three times over
-     * a fortnight — so the readings, the change log and the dashboard aren't
-     * empty on first login. The readings go through the real reader, so the
-     * changes are the ones it would actually have found.
+     * Gives a fresh install something to look at: a company with two
+     * competitors and a digest already sent, so the dashboard is not empty on
+     * first login.
      */
     public function run(): void
     {
@@ -41,94 +32,47 @@ class DatabaseSeeder extends Seeder
             'name' => 'Northwind Analytics',
             'url' => null,
             'description' => 'Product analytics for small SaaS teams, competing on simplicity and a generous free tier.',
+            'last_digest_at' => Carbon::now()->subDay(),
+            'next_digest_at' => Carbon::now()->addWeek(),
         ]);
 
         $user->switchBusiness($business);
 
-        $acme = Competitor::factory()->for($business)->create([
+        $acme = Competitor::factory()->for($business)->discovered()->create([
             'name' => 'Acme Insights',
             'url' => 'https://example.com',
-            'description' => 'The incumbent. Expensive, sold to enterprises, slow to ship.',
+            'reason' => 'The incumbent in product analytics, sold to the same teams on a bigger budget.',
         ]);
 
-        $widgets = Competitor::factory()->for($business)->create([
+        $widgets = Competitor::factory()->for($business)->discovered()->create([
             'name' => 'Widgets Inc',
             'url' => 'https://example.org',
-            'description' => 'A newer rival with a free tier like ours, and they move fast.',
+            'reason' => 'A newer rival with a free tier like yours, shipping quickly.',
         ]);
 
-        $this->seedReadings(
-            WatchedPage::factory()->for($acme)->create([
-                'name' => 'Pricing',
-                'url' => 'https://example.com/pricing',
-                'watch_for' => 'Each plan\'s name and price, what\'s included, and any plan added or removed.',
-                'category' => PageCategory::Pricing,
-                'frequency' => CreepFrequency::Daily,
-            ]),
-            [
-                14 => ['Starter' => '$49/month', 'Growth' => '$199/month', 'Enterprise' => 'Contact sales'],
-                7 => ['Starter' => '$49/month', 'Growth' => '$249/month', 'Enterprise' => 'Contact sales'],
-                0 => ['Starter' => '$59/month', 'Growth' => '$249/month', 'Enterprise' => 'Contact sales', 'Free trial' => '14 days'],
+        Digest::factory()->for($business)->sent()->create([
+            'report' => [
+                'headline' => 'Acme raised prices again while Widgets shipped AI insights to its free tier.',
+                'competitors' => [
+                    [
+                        'subject' => "competitor:{$acme->id}",
+                        'summary' => 'Acme moved its Growth plan up and introduced a 14-day free trial.',
+                        'items' => [
+                            ['title' => 'Growth plan now $249/month', 'detail' => 'Up from $199, announced on their pricing page.', 'url' => 'https://example.com/pricing', 'date' => Carbon::now()->subDays(3)->toDateString()],
+                            ['title' => '14-day free trial', 'detail' => 'The first trial Acme has offered without talking to sales.', 'url' => null, 'date' => null],
+                        ],
+                    ],
+                    [
+                        'subject' => "competitor:{$widgets->id}",
+                        'summary' => 'Widgets shipped v2.6.0 with AI insights and widened the free tier.',
+                        'items' => [
+                            ['title' => 'v2.6.0: AI insights', 'detail' => 'Automatic summaries of funnels and sessions.', 'url' => 'https://example.org/changelog', 'date' => Carbon::now()->subDay()->toDateString()],
+                            ['title' => 'Free tier now 10k events/month', 'detail' => 'Doubled, aimed squarely at small teams.', 'url' => null, 'date' => null],
+                        ],
+                    ],
+                ],
+                'notes' => null,
             ],
-            'Three paid plans; Growth is the one most teams buy.',
-        );
-
-        $this->seedReadings(
-            WatchedPage::factory()->for($widgets)->create([
-                'name' => 'Changelog',
-                'url' => 'https://example.org/changelog',
-                'watch_for' => 'New releases: the version, the date, and the headline features.',
-                'category' => PageCategory::Releases,
-                'frequency' => CreepFrequency::Daily,
-            ]),
-            [
-                14 => ['Latest release' => 'v2.4.0 (2 weeks ago)', 'Headline feature' => 'Funnel reports'],
-                7 => ['Latest release' => 'v2.5.0 (last week)', 'Headline feature' => 'Session replay'],
-                0 => ['Latest release' => 'v2.6.0 (today)', 'Headline feature' => 'AI insights', 'Free tier' => 'Now 10k events/month'],
-            ],
-            'A release every week or so, each leading with one big feature.',
-        );
-
-        // A comparison already run, so the dashboard opens on one.
-        LandscapeAnalysis::factory()->for($business)->create();
-    }
-
-    /**
-     * Read a page several times, oldest first, filing each reading and the
-     * changes it revealed exactly as a real run would.
-     *
-     * @param  array<int, array<string, string>>  $readings  Days ago => facts (label => value).
-     */
-    private function seedReadings(WatchedPage $watchedPage, array $readings, string $summary): void
-    {
-        $instructions = new WatchInstructions;
-
-        foreach ($readings as $daysAgo => $facts) {
-            $moment = Carbon::now()->subDays($daysAgo);
-
-            $run = CreepRun::factory()->for($watchedPage, 'watchedPage')->create([
-                'status' => RunStatus::Succeeded,
-                'started_at' => $moment,
-                'finished_at' => $moment->copy()->addSeconds(8),
-                'duration_ms' => 8000,
-            ]);
-
-            $reading = $instructions->record($run, [
-                'summary' => $summary,
-                'facts' => $facts,
-                'captured_at' => $moment->toIso8601String(),
-            ]);
-
-            foreach ($reading->changes as $change) {
-                CreepChange::create($change);
-            }
-
-            $watchedPage->unsetRelation('latestSnapshot');
-        }
-
-        $watchedPage->forceFill([
-            'last_crept_at' => Carbon::now(),
-            'next_creep_at' => Carbon::now()->addDay(),
-        ])->save();
+        ]);
     }
 }

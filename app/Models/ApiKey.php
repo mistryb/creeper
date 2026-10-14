@@ -17,9 +17,9 @@ use Illuminate\Support\Carbon;
  * One model API key on a user's keyring.
  *
  * Keys live here and nowhere else — there is no key in the environment for
- * Creeper to fall back on. Each page picks the key it spends, so a user can
- * keep one key for the shopping they do on their own account and another for
- * work, and see which is which without ever seeing either again.
+ * Creeper to fall back on. Each company picks the key its discovery and
+ * digests spend, so a user can keep one key per company, or one for all of
+ * them, and see which is which without ever seeing either again.
  *
  * @property int $id
  * @property int $user_id
@@ -30,7 +30,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $user
- * @property-read Collection<int, WatchedPage> $watchedPages
+ * @property-read Collection<int, Business> $businesses
  */
 #[Fillable(['name', 'provider', 'key', 'hint'])]
 #[Hidden(['key'])]
@@ -56,10 +56,14 @@ class ApiKey extends Model
         return $this->belongsTo(User::class);
     }
 
-    /** @return HasMany<WatchedPage, $this> */
-    public function watchedPages(): HasMany
+    /**
+     * The companies whose digests this key pays for.
+     *
+     * @return HasMany<Business, $this>
+     */
+    public function businesses(): HasMany
     {
-        return $this->hasMany(WatchedPage::class);
+        return $this->hasMany(Business::class);
     }
 
     /**

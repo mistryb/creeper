@@ -24,17 +24,17 @@ export default function BusinessesIndex({
 
     return (
         <>
-            <Head title="Businesses" />
+            <Head title="Companies" />
 
             <Page>
                 <SectionHeading
-                    title="Businesses"
-                    note={count === 1 ? '1 business' : `${count} businesses`}
+                    title="Companies"
+                    note={count === 1 ? '1 company' : `${count} companies`}
                     actions={
                         <Button asChild>
                             <Link href={create()}>
                                 <Plus aria-hidden />
-                                New business
+                                New company
                             </Link>
                         </Button>
                     }
@@ -43,27 +43,27 @@ export default function BusinessesIndex({
                 {count === 0 ? (
                     <EmptyState
                         icon={Building2}
-                        title="No business yet"
+                        title="No company yet"
                         actions={
                             <Button asChild>
                                 <Link href={create()}>
                                     <Plus aria-hidden />
-                                    Set up your business
+                                    Set up your company
                                 </Link>
                             </Button>
                         }
                     >
-                        Describe your business, and Creeper will know what to
-                        look for when it watches your competitors.
+                        Describe your company. Creeper finds who you are up
+                        against and writes you a digest on a schedule.
                     </EmptyState>
                 ) : (
                     <Table>
                         <TableCaption className="sr-only">
-                            Businesses
+                            Companies
                         </TableCaption>
                         <TableHeader>
                             <TableRow>
-                                <TableHead scope="col">Business</TableHead>
+                                <TableHead scope="col">Company</TableHead>
                                 <TableHead scope="col">Last updated</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -101,5 +101,5 @@ export default function BusinessesIndex({
 }
 
 BusinessesIndex.layout = {
-    breadcrumbs: [{ title: 'Businesses', href: index() }],
+    breadcrumbs: [{ title: 'Companies', href: index() }],
 };

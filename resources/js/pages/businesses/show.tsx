@@ -22,16 +22,20 @@ import {
 } from '@/components/ui/dialog';
 import { formatDateTime, hostOf } from '@/lib/format';
 import { index, show } from '@/routes/businesses';
-import type { Business } from '@/types';
+import type { Business, SelectOption } from '@/types';
 
 export default function ShowBusiness({
     business: { data: business },
+    frequencies,
+    apiKeys,
 }: {
     business: { data: Business };
+    frequencies: SelectOption[];
+    apiKeys: SelectOption[];
 }) {
     setLayoutProps({
         breadcrumbs: [
-            { title: 'Businesses', href: index() },
+            { title: 'Companies', href: index() },
             { title: business.name, href: show(business.id) },
         ],
     });
@@ -61,10 +65,11 @@ export default function ShowBusiness({
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>About this business</CardTitle>
+                        <CardTitle>About this company</CardTitle>
                         <CardDescription>
-                            Creeper reads every competitor against this
-                            description.
+                            Competitors are found and written up against this
+                            description. Changing the cadence moves the next
+                            digest.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -77,6 +82,8 @@ export default function ShowBusiness({
                                 <>
                                     <BusinessFields
                                         business={business}
+                                        frequencies={frequencies}
+                                        apiKeys={apiKeys}
                                         errors={errors}
                                     />
 
@@ -109,13 +116,14 @@ function DeleteBusiness({ business }: { business: Business }) {
         <Dialog>
             <DialogTrigger asChild>
                 <Button variant="ghost" className="hover:text-ribbon-red">
-                    Delete business
+                    Delete company
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogTitle>Delete {business.name}?</DialogTitle>
                 <DialogDescription>
-                    Its name and description go for good. This cannot be undone.
+                    Its competitors and every digest written about them go for
+                    good. This cannot be undone.
                 </DialogDescription>
 
                 <Form {...BusinessController.destroy.form(business.id)}>

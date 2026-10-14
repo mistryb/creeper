@@ -35,7 +35,7 @@ export function CompetitorFields({
                 htmlFor="url"
                 optional
                 error={errors.url}
-                hint="Read when you analyse them."
+                hint="Where Creeper starts when it researches them."
             >
                 <Input
                     id="url"
@@ -53,7 +53,7 @@ export function CompetitorFields({
                 htmlFor="description"
                 optional
                 error={errors.description}
-                hint="Who they sell to, how they compete with you, anything you have heard. It sharpens their analysis."
+                hint="Who they sell to, how they compete with you, anything you have heard. It sharpens what the digest looks for."
             >
                 <Textarea
                     id="description"

@@ -18,9 +18,9 @@ import { REPOSITORY_URL } from '@/lib/links';
 /**
  * The prompt, written to be pasted into an agent rather than read as prose.
  * It names the commands the Laravel Cloud CLI actually has, and every piece of
- * Creeper that has to be running for a creep to fire — the queue worker and
+ * Creeper that has to be running for a digest to go out — the queue worker and
  * the scheduler — because an agent that skips those deploys a site that looks
- * fine and never creeps anything.
+ * fine and never sends anything.
  *
  * It also asks who is allowed in. An install left open is one anybody who
  * finds the URL can sign into, so the addresses are named at deploy time and
@@ -40,10 +40,13 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
    front end with "npm ci && npm run build", and run "php artisan migrate
    --force" on each deploy.
 
-4. Creeper needs two things running besides the web app, or nothing is ever
-   crept:
-     - the scheduler, which dispatches due creeps every minute
-     - a queue worker background process running "php artisan queue:work"
+4. Creeper needs two things running besides the web app, or no digest is
+   ever sent:
+     - the scheduler, running "php artisan schedule:run" every minute; it
+       runs "creeper:dispatch-due-digests" for every company whose digest
+       is due
+     - a queue worker background process running "php artisan queue:work",
+       which does the research and sends the mail
 
 5. Set the environment with "cloud environment:variables -n --force":
      APP_NAME=Creeper
@@ -51,16 +54,24 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
      AUTHORIZED_EMAILS=...          the addresses allowed to sign in, comma
                                     separated — ask me who, and put mine
                                     first. Nobody else can get an account
-     CREEP_DRIVER=llm
-     DB_QUEUE_RETRY_AFTER=330       leave this above the job timeout, or a
-                                    slow page is crept twice and billed twice
-     MAIL_...                       signing in means receiving a six digit
+     DB_QUEUE_RETRY_AFTER=330       leave this above the 300 second job
+                                    timeout, or a slow digest is researched
+                                    twice and billed twice
+     MAIL_MAILER=resend
+     RESEND_API_KEY=...             signing in means receiving a six digit
                                     code, so mail has to work — ask me for
-                                    the credentials
+                                    the key
+   Leave these at their defaults unless I say otherwise:
+     DIGEST_MODEL=                  empty takes the provider's own default
+     DIGEST_TIMEOUT=180             seconds per model call
+     DIGEST_MAX_SEARCHES=12         web searches one digest may make
+     DIGEST_DISCOVERY_MAX_SEARCHES=8
+     DIGEST_DISCOVERY_MAX_COMPETITORS=8
+     DIGEST_FETCH_*                 limits for reading my own homepage
    There is deliberately no model API key here: keys are added inside the
-   app, under Settings → API keys, and each watched page picks the one it spends.
-   Use CREEP_DRIVER=fake instead if I tell you I want to look around before
-   paying for a model.
+   app, under Settings → API keys, and each company picks the one it spends.
+   Every search is billed to that key, which is what the DIGEST_*_SEARCHES
+   caps are for.
 
 6. Finish with "cloud deploy:monitor -n". If the deploy fails, show me what
    broke before you change anything. When it lands, give me the URL — I sign
@@ -69,7 +80,7 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
 7. Tell me that adding somebody later means adding their address to
    AUTHORIZED_EMAILS and deploying again, and how to do that. Tell me too
    that the first thing to do once I am signed in is add a model API key
-   under Settings → API keys, because nothing can be crept without one.`;
+   under Settings → API keys, because nothing can be researched without one.`;
 
 /** One thing the agent does, numbered the way the landing page numbers setup. */
 function AgentStep({
@@ -223,17 +234,17 @@ export default function Deploy() {
                         </AgentStep>
 
                         <AgentStep step="04" heading="Start the two workers">
-                            A queue worker does the creeping and the scheduler
-                            decides when a watched page is due. Both have to be
-                            running, or you get a site that looks perfectly fine
-                            and never checks a page.
+                            The scheduler decides when a digest is due and a
+                            queue worker does the research and sends the mail.
+                            Both have to be running, or you get a site that
+                            looks perfectly fine and never emails anyone.
                         </AgentStep>
 
                         <AgentStep step="05" heading="Hand you the URL">
                             It watches the deploy land, then gives you the
                             address. Sign in with one of the addresses you
                             authorized, add your model key under Settings, and
-                            put a page on watch.
+                            add your company.
                         </AgentStep>
                     </ol>
                 </section>
@@ -265,7 +276,7 @@ export default function Deploy() {
                             </p>
 
                             <p className="mt-3.5 mb-6 text-paper-lit/70">
-                                Every driver, migration and schedule Creeper
+                                Every prompt, migration and schedule Creeper
                                 has, in one repository.
                             </p>
 

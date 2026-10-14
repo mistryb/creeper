@@ -38,17 +38,6 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * Businesses go by database cascade, which fires no model events, so
-     * they are deleted one by one first — each takes its analyses with it.
-     */
-    protected static function booted(): void
-    {
-        static::deleting(function (User $user): void {
-            $user->businesses()->get()->each->delete();
-        });
-    }
-
-    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -115,7 +104,7 @@ class User extends Authenticatable
     }
 
     /**
-     * The businesses this account watches competitors for, in the order they
+     * The companies this account gets digests about, in the order they
      * were set up.
      *
      * @return HasMany<Business, $this>

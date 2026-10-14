@@ -2,47 +2,42 @@
 
 namespace App\Models;
 
-use App\Ai\Contracts\Analyzable;
 use Database\Factories\CompetitorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
 
 /**
- * A company a business competes with: who they are, the pages of theirs that
- * Creeper watches, and the analyses run on them.
+ * A company a business competes with, whether the user named them or Creeper
+ * found them.
  *
  * @property int $id
  * @property int $business_id
  * @property string $name
  * @property string|null $url Their website.
  * @property string|null $description What the user knows about them.
+ * @property Carbon|null $discovered_at When Creeper found them. Null for ones the user added.
+ * @property string|null $reason Why Creeper picked them, in one line.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Business $business
- * @property-read Collection<int, WatchedPage> $watchedPages
- * @property-read Collection<int, BusinessAnalysis> $analyses
  */
-#[Fillable(['name', 'url', 'description'])]
-class Competitor extends Model implements Analyzable
+#[Fillable(['name', 'url', 'description', 'discovered_at', 'reason'])]
+class Competitor extends Model
 {
     /** @use HasFactory<CompetitorFactory> */
     use HasFactory;
 
     /**
-     * Analyses hang off a polymorphic key, which no foreign key can cascade
-     * from, so they are taken down here instead.
+     * @return array<string, string>
      */
-    protected static function booted(): void
+    protected function casts(): array
     {
-        static::deleting(function (Competitor $competitor): void {
-            $competitor->analyses()->delete();
-        });
+        return [
+            'discovered_at' => 'datetime',
+        ];
     }
 
     /** @return BelongsTo<Business, $this> */
@@ -51,44 +46,41 @@ class Competitor extends Model implements Analyzable
         return $this->belongsTo(Business::class);
     }
 
-    /** @return HasMany<WatchedPage, $this> */
-    public function watchedPages(): HasMany
-    {
-        return $this->hasMany(WatchedPage::class);
-    }
-
-    /** @return MorphMany<BusinessAnalysis, $this> */
-    public function analyses(): MorphMany
-    {
-        return $this->morphMany(BusinessAnalysis::class, 'analyzable')->orderBy('id');
-    }
-
+    /**
+     * The account this competitor is written up for: whoever owns the
+     * company they compete with.
+     */
     public function owner(): User
     {
         return $this->business->user;
     }
 
     /**
-     * The competitor, and the business it competes with. A competitor is only
-     * interesting relative to somebody, so the model is told who.
+     * How a prompt and a report refer to this competitor, so a row survives
+     * a rename and is dropped when the competitor is deleted.
      */
-    public function analysisBrief(): string
+    public function subject(): string
     {
-        return implode("\n", array_filter([
-            "Name: {$this->name}",
-            $this->url === null ? null : "Website: {$this->url}",
-            "Relationship: a competitor of the user's business, {$this->business->name}.",
-            '',
-            'What the user knows about them:',
-            filled($this->description) ? $this->description : '(nothing written yet)',
-            '',
-            "The user's own business, for context — analyse the competitor, not this:",
-            $this->business->description,
-        ], fn (?string $line): bool => $line !== null));
+        return "competitor:{$this->id}";
     }
 
-    public function analysisUrl(): ?string
+    /**
+     * The website's host, lowercased and without `www.`, for matching a
+     * proposed competitor against the ones already here. Null without a URL.
+     */
+    public function host(): ?string
     {
-        return $this->url;
+        return self::hostOf($this->url);
+    }
+
+    public static function hostOf(?string $url): ?string
+    {
+        if ($url === null) {
+            return null;
+        }
+
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return is_string($host) ? mb_strtolower(preg_replace('/^www\./', '', $host) ?? $host) : null;
     }
 }
