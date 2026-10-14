@@ -25,6 +25,71 @@ export type ResourceCollection<T> = {
     data: T[];
 };
 
+/**
+ * A paginated resource collection: `Resource::collection($query->paginate())`.
+ */
+export type Paginated<T> = {
+    data: T[];
+    links: {
+        prev: string | null;
+        next: string | null;
+    };
+    meta: {
+        current_page: number;
+        last_page: number;
+        total: number;
+        from: number | null;
+        to: number | null;
+    };
+};
+
+export type PlanName = 'single' | 'unlimited';
+
+/** Where the signed-in account stands with billing, shared on every page. */
+export type BillingSummary = {
+    plan: PlanName | null;
+    /** Set only while the card-free trial is running. */
+    trialEndsAt: string | null;
+    /** True once the trial or subscription has ended with no plan to replace it. */
+    needsPlan: boolean;
+};
+
+/** A plan as the billing screen offers it. */
+export type PlanOption = {
+    value: PlanName;
+    label: string;
+    /** Dollars a month. */
+    price: number;
+    /** Null means no limit. */
+    businessLimit: number | null;
+};
+
+/** An account, as the admin panel lists it. */
+export type AdminUser = {
+    id: number;
+    name: string;
+    email: string;
+    status: string;
+    comped: boolean;
+    is_admin: boolean;
+    businesses_count: number;
+    /** Null means no limit. */
+    business_limit: number | null;
+    created_at: string | null;
+};
+
+/** A company across every account, as the admin panel lists it. */
+export type AdminBusiness = {
+    id: number;
+    name: string;
+    url: string | null;
+    owner_email: string;
+    digest_frequency_label: string;
+    competitors_count: number;
+    last_digest_at: string | null;
+    created_at: string | null;
+};
+
 /** A company the user gets digests about. */
 export type Business = {
     id: number;

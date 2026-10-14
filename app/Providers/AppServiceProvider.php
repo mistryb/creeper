@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Business;
 use App\Models\Competitor;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -11,9 +12,11 @@ use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Console\WebhookCommand;
 use Laravel\Fortify\Fortify;
 
 class AppServiceProvider extends ServiceProvider
@@ -42,6 +45,28 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureRateLimiting();
         $this->configureDevCommands();
+
+        // The admin panel is for the addresses named in ADMIN_EMAILS.
+        Gate::define('admin', fn (User $user): bool => $user->isAdmin());
+    }
+
+    /**
+     * Extra panes for `composer run dev` (`php artisan dev`): Mailpit for the
+     * mail the app sends, and Stripe's webhook listener when it bills.
+     */
+    protected function configureDevCommands(): void
+    {
+        // Scoped to the one command that reads this, so no other Artisan call
+        // pays for the lookups below.
+        if (! $this->app->runningInConsole() || ($_SERVER['argv'][1] ?? null) !== 'dev') {
+            return;
+        }
+
+        $this->registerMailpit();
+
+        if ($listen = $this->stripeListenCommand($this->locateBinary('stripe'))) {
+            DevCommands::register($listen, 'stripe')->blue();
+        }
     }
 
     /**
@@ -54,14 +79,8 @@ class AppServiceProvider extends ServiceProvider
      * last one matters — somebody running `brew services start mailpit` already
      * has it listening, and a second copy would crash-loop in its own pane.
      */
-    protected function configureDevCommands(): void
+    protected function registerMailpit(): void
     {
-        // Scoped to the one command that reads this, so no other Artisan call
-        // pays for the lookups below.
-        if (! $this->app->runningInConsole() || ($_SERVER['argv'][1] ?? null) !== 'dev') {
-            return;
-        }
-
         $host = (string) config('mail.mailers.smtp.host');
         $port = (int) config('mail.mailers.smtp.port');
 
@@ -73,7 +92,7 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        $mailpit = $this->locateMailpit();
+        $mailpit = $this->locateBinary('mailpit');
 
         if ($mailpit === null || $this->portIsTaken($host, $port)) {
             return;
@@ -86,22 +105,50 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Find the Mailpit binary without shelling out.
+     * The `stripe listen` command that forwards Stripe's events to Cashier's
+     * webhook, or null when there is nothing to listen for: a self-hosted
+     * install, or no Stripe CLI on this machine.
      *
-     * The Homebrew keg path is checked too: `brew install` links it into a
+     * A subscription started on Stripe Checkout only reaches the database by
+     * webhook, and so does every change made in the billing portal, so a
+     * billed install run locally without this never sees anyone pay. The CLI
+     * signs what it forwards with its own secret — `stripe listen
+     * --print-secret` — which is the one STRIPE_WEBHOOK_SECRET must hold.
+     *
+     * Forwards exactly the events `cashier:webhook` subscribes a real
+     * endpoint to, so local and production hear the same things.
+     */
+    public function stripeListenCommand(?string $stripe): ?string
+    {
+        if ($stripe === null || ! config('billing.enabled')) {
+            return null;
+        }
+
+        return sprintf(
+            '%s listen --forward-to %s --events %s',
+            escapeshellarg($stripe),
+            escapeshellarg(url(config('cashier.path').'/webhook')),
+            implode(',', config('cashier.webhook.events') ?: WebhookCommand::DEFAULT_EVENTS),
+        );
+    }
+
+    /**
+     * Find a binary — Mailpit, the Stripe CLI — without shelling out.
+     *
+     * The Homebrew paths are checked too: `brew install` links into a
      * directory that is on an interactive shell's PATH but not always on the
      * PATH this process inherited.
      */
-    protected function locateMailpit(): ?string
+    protected function locateBinary(string $name): ?string
     {
         $candidates = [
             ...array_map(
-                fn (string $dir): string => rtrim($dir, DIRECTORY_SEPARATOR).'/mailpit',
+                fn (string $dir): string => rtrim($dir, DIRECTORY_SEPARATOR).'/'.$name,
                 explode(PATH_SEPARATOR, (string) getenv('PATH')),
             ),
-            '/opt/homebrew/bin/mailpit',
-            '/opt/homebrew/opt/mailpit/bin/mailpit',
-            '/usr/local/bin/mailpit',
+            "/opt/homebrew/bin/{$name}",
+            "/opt/homebrew/opt/{$name}/bin/{$name}",
+            "/usr/local/bin/{$name}",
         ];
 
         foreach ($candidates as $candidate) {

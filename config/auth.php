@@ -92,6 +92,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Admins
+    |--------------------------------------------------------------------------
+    |
+    | The addresses that can open the admin panel, separated by commas. Empty
+    | means nobody can. Being listed here does not let an address sign in on
+    | its own — on a private install it still has to be authorized above.
+    |
+    */
+
+    'admin_emails' => env('ADMIN_EMAILS', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Signing In Locally
     |--------------------------------------------------------------------------
     |

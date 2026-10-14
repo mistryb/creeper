@@ -9,11 +9,11 @@ use Illuminate\Support\Str;
 /**
  * Who is allowed an account on this install.
  *
- * There is no invitation and no admin screen: an address is let in because it
- * is named in `AUTHORIZED_EMAILS`, and adding somebody is an edit to that
- * variable followed by a redeploy. That is the whole user administration a
- * self-hosted copy has, and it is deliberate — the operator already owns the
- * environment, and anything more would be an account system to maintain.
+ * There is no invitation, and the admin panel cannot let anybody in: an
+ * address is let in because it is named in `AUTHORIZED_EMAILS`, and adding
+ * somebody is an edit to that variable followed by a redeploy. That is
+ * deliberate — the operator already owns the environment, and anything more
+ * would be an account system to maintain.
  *
  * An empty list means no restriction at all, which is how a public install
  * and a local checkout run. Turning the list on is what makes an install

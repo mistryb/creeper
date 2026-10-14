@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
+use App\Http\Controllers\Admin\OverviewController as AdminOverviewController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\CompetitorDiscoveryController;
@@ -71,6 +74,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('businesses.competitors', CompetitorController::class)
         ->shallow()
         ->except('edit');
+});
+
+/*
+ * The admin panel, for the addresses in ADMIN_EMAILS: every account and its
+ * plan, every company, and what the install earns. Comping writes to another
+ * account, so it is throttled like any other write that matters.
+ */
+Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', AdminOverviewController::class)->name('overview');
+
+    Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+
+    Route::post('users/{user}/comp', [AdminUserController::class, 'comp'])
+        ->middleware('throttle:30,1')
+        ->name('users.comp');
+
+    Route::delete('users/{user}/comp', [AdminUserController::class, 'uncomp'])
+        ->middleware('throttle:30,1')
+        ->name('users.uncomp');
+
+    Route::get('businesses', [AdminBusinessController::class, 'index'])->name('businesses.index');
 });
 
 require __DIR__.'/auth.php';

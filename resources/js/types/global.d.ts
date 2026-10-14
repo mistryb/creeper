@@ -1,5 +1,5 @@
 import type { Auth } from '@/types/auth';
-import type { BusinessChoices } from '@/types/creeper';
+import type { BillingSummary, BusinessChoices } from '@/types/creeper';
 
 declare module 'react' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -14,6 +14,8 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             businessChooser: BusinessChoices;
+            /** Null on a self-hosted install, and for guests. */
+            billing: BillingSummary | null;
             [key: string]: unknown;
         };
     }

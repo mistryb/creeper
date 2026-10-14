@@ -20,6 +20,7 @@ import {
     Meter,
     Score,
     Ok,
+    Pager,
     Panel,
     PanelBar,
     Prompt,
@@ -147,7 +148,7 @@ function Spec({
         <div className="space-y-2">
             <p className="label-micro text-muted-foreground">{label}</p>
             <div
-                className={`flex flex-wrap items-center gap-3 border border-dashed border-rule bg-card p-4 ${className}`}
+                className={`flex flex-wrap items-center gap-3 rounded-card border border-dashed border-rule bg-card p-4 ${className}`}
             >
                 {children}
             </div>
@@ -209,13 +210,13 @@ export default function DesignSystem() {
                         <p className="max-w-[42rem] text-[1.0625rem] text-ink-soft">
                             Three rules hold this together.{' '}
                             <strong className="font-medium text-ink">
-                                Nothing is round
+                                Cards are round, controls are square
                             </strong>{' '}
-                            — the radius scale is zeroed, and only{' '}
+                            — every card-like surface takes{' '}
                             <code className="font-mono text-[0.9em]">
-                                rounded-full
-                            </code>{' '}
-                            survives.{' '}
+                                rounded-card
+                            </code>
+                            , and buttons, inputs and menus keep a hard corner.{' '}
                             <strong className="font-medium text-ink">
                                 Shadows are hard offsets
                             </strong>
@@ -237,7 +238,7 @@ export default function DesignSystem() {
                             {PALETTE.map((swatch) => (
                                 <div
                                     key={swatch.token}
-                                    className="border border-rule bg-card"
+                                    className="overflow-hidden rounded-card border border-rule bg-card"
                                 >
                                     <div
                                         className="h-16 border-b border-rule"
@@ -273,7 +274,7 @@ export default function DesignSystem() {
                         title="Type"
                         note="Four recipes, as utilities"
                     >
-                        <div className="space-y-6 border border-rule bg-card p-5">
+                        <div className="space-y-6 rounded-card border border-rule bg-card p-5">
                             <div>
                                 <p className="label-micro text-muted-foreground">
                                     .display-dot · Doto 800
@@ -414,6 +415,24 @@ export default function DesignSystem() {
                                 </EmptyState>
                                 <EmptyLine>No runs yet</EmptyLine>
                             </div>
+                        </Spec>
+
+                        <Spec
+                            label="Pager"
+                            use="Under a paginated list. Pass the links and meta of a paginated resource collection; it hides itself on a single page."
+                            className="block"
+                        >
+                            <Pager
+                                className="w-full"
+                                links={{ prev: null, next: null }}
+                                meta={{
+                                    current_page: 1,
+                                    last_page: 4,
+                                    total: 80,
+                                    from: 1,
+                                    to: 25,
+                                }}
+                            />
                         </Spec>
                     </Section>
 

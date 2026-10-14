@@ -1,6 +1,10 @@
 <?php
 
+use App\Enums\Plan;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Laravel\Cashier\Subscription;
 use Tests\TestCase;
 
 /*
@@ -43,3 +47,33 @@ expect()->extend('toBeOne', function () {
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
+
+/**
+ * Turn billing on the way a configured install has it: a secret and a price
+ * for each plan.
+ */
+function enableBilling(): void
+{
+    config([
+        'billing.enabled' => true,
+        'billing.prices.single' => 'price_single',
+        'billing.prices.unlimited' => 'price_unlimited',
+    ]);
+}
+
+/**
+ * Put an account on a plan, the way Cashier's webhook would record it.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function subscribe(User $user, Plan $plan, array $attributes = []): Subscription
+{
+    return $user->subscriptions()->create([
+        'type' => 'default',
+        'stripe_id' => 'sub_'.Str::random(10),
+        'stripe_status' => 'active',
+        'stripe_price' => $plan->priceId(),
+        'quantity' => 1,
+        ...$attributes,
+    ]);
+}

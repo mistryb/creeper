@@ -1,16 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
-import type { ReactNode } from 'react';
+import { ArrowLeft, Github } from 'lucide-react';
+import { CopyBlock, CopyDock, Eyebrow } from '@/components/ds';
 import {
-    Chip,
-    ChipRow,
-    CopyBlock,
-    CopyDock,
-    Display,
-    Eyebrow,
-    Panel,
-    PanelBar,
-    SectionHeading,
-} from '@/components/ds';
+    LaravelLockup,
+    LaravelMark,
+} from '@/components/marketing/laravel-logo';
+import { MarketingHeading, MarketingStep } from '@/components/marketing/type';
 import { Button } from '@/components/ui/button';
 import MarketingLayout, { MarketingNavLink } from '@/layouts/marketing-layout';
 import { REPOSITORY_URL } from '@/lib/links';
@@ -82,31 +77,6 @@ const PROMPT = `Deploy Creeper on Laravel Cloud for me.
    that the first thing to do once I am signed in is add a model API key
    under Settings → API keys, because nothing can be researched without one.`;
 
-/** One thing the agent does, numbered the way the landing page numbers setup. */
-function AgentStep({
-    step,
-    heading,
-    children,
-}: {
-    step: string;
-    heading: string;
-    children: ReactNode;
-}) {
-    return (
-        <li className="grid grid-cols-[3.25rem_1fr] gap-3 border-t border-rule px-3.5 py-5 first:border-t-0 odd:bg-greenbar sm:gap-7 sm:px-6 sm:py-6">
-            <span className="pt-0.5 label-mono text-ribbon">{step}</span>
-            <div>
-                <h3 className="mb-1.5 font-mono text-[0.9375rem] font-semibold tracking-[0.14em] uppercase">
-                    {heading}
-                </h3>
-                <p className="max-w-[40rem] text-[0.9375rem] text-ink-soft">
-                    {children}
-                </p>
-            </div>
-        </li>
-    );
-}
-
 export default function Deploy() {
     return (
         <>
@@ -124,66 +94,51 @@ export default function Deploy() {
                     </>
                 }
             >
-                <section className="mx-auto w-full max-w-5xl px-4 pt-8 pb-10 sm:px-10 sm:pt-16 sm:pb-16">
-                    <Panel>
-                        <PanelBar title="creeper · deploy" meta="one prompt" />
+                <section className="mx-auto w-full max-w-3xl px-4 pt-14 pb-16 sm:px-10 sm:pt-20 sm:pb-24">
+                    <Eyebrow className="mb-6">Your own copy</Eyebrow>
 
-                        <div className="p-6 sm:p-12">
-                            <Eyebrow className="mb-5 flex flex-wrap items-center gap-2.5">
-                                <span>Your own copy</span>
-                                <span className="text-rule">/</span>
-                                <span>Laravel Cloud</span>
-                            </Eyebrow>
+                    <MarketingHeading size="hero" className="mb-6">
+                        Hand it to
+                        <br />
+                        <span className="text-ribbon">your agent.</span>
+                    </MarketingHeading>
 
-                            <Display
-                                as="h1"
-                                size="lg"
-                                className="mb-5 max-w-[22ch] text-balance"
-                            >
-                                Hand it to
-                                <br />
-                                <span className="text-ribbon">your agent.</span>
-                            </Display>
+                    <p className="max-w-[34rem] text-[1.0625rem] text-ink-soft">
+                        Creeper is an ordinary Laravel app, and Laravel Cloud
+                        runs it as it is — no container to build, nothing to
+                        keep alive yourself. Paste one prompt into Claude Code,
+                        or whichever agent you keep a terminal open for, and it
+                        does the whole thing.
+                    </p>
 
-                            <p className="mb-8 max-w-[40rem] text-[1.0625rem] text-ink-soft">
-                                Creeper is an ordinary Laravel app, and{' '}
-                                <strong className="font-medium text-ink">
-                                    Laravel Cloud runs it as it is
-                                </strong>{' '}
-                                — no container to build, nothing to keep alive
-                                yourself. Copy the prompt below into Claude
-                                Code, or whichever agent you keep a terminal
-                                open for, and it does the whole thing.
-                            </p>
+                    <LaravelLockup className="mt-8 h-7 w-auto text-ink" />
 
-                            <ChipRow>
-                                <Chip on>a Laravel Cloud account</Chip>
-                                <Chip on>an agent with a shell</Chip>
-                                <Chip>a model API key</Chip>
-                            </ChipRow>
-                        </div>
-                    </Panel>
+                    <p className="mt-6 max-w-[34rem] text-[0.9375rem] text-ink-soft">
+                        You need{' '}
+                        <strong className="font-medium text-ink">
+                            a Laravel Cloud account
+                        </strong>
+                        ,{' '}
+                        <strong className="font-medium text-ink">
+                            an agent with a shell
+                        </strong>{' '}
+                        and, once it is running,{' '}
+                        <strong className="font-medium text-ink">
+                            a model API key
+                        </strong>
+                        .
+                    </p>
                 </section>
 
                 <section
                     id="prompt"
-                    className="mx-auto w-full max-w-5xl px-4 pb-12 sm:px-10 sm:pb-20"
+                    className="mx-auto w-full max-w-3xl scroll-mt-6 px-4 pb-16 sm:px-10 sm:pb-24"
                 >
-                    <SectionHeading
-                        as="h2"
-                        className="mb-5"
-                        title="Copy this, paste it in"
-                        note="Then answer the three things it asks you for"
-                    />
+                    <MarketingHeading className="mb-4">
+                        Copy this, paste it in.
+                    </MarketingHeading>
 
-                    <CopyBlock
-                        title="deploy prompt"
-                        meta="reads it top to bottom"
-                        action="Copy the prompt"
-                        text={PROMPT}
-                    />
-
-                    <p className="mt-4 max-w-[40rem] text-sm text-ink-soft">
+                    <p className="mb-8 max-w-[34rem] text-ink-soft">
                         The prompt asks for three things: your model API key,
                         your mail credentials, and the addresses allowed to sign
                         in. It will not guess at any of them — Creeper signs
@@ -191,120 +146,108 @@ export default function Deploy() {
                         that cannot send mail cannot let anybody in, and an
                         install that admits every address is not yours.
                     </p>
+
+                    <CopyBlock
+                        title="deploy prompt"
+                        meta="reads it top to bottom"
+                        action="Copy the prompt"
+                        text={PROMPT}
+                    />
                 </section>
 
                 <section
                     id="steps"
-                    className="mx-auto w-full max-w-5xl px-4 pb-12 sm:px-10 sm:pb-20"
+                    className="mx-auto w-full max-w-3xl scroll-mt-6 px-4 pb-16 sm:px-10 sm:pb-24"
                 >
-                    <SectionHeading
-                        as="h2"
-                        className="mb-5"
-                        title="What your agent will do"
-                        note="So you can follow along, or stop it"
-                    />
+                    <MarketingHeading className="mb-6">
+                        What your agent will do.
+                    </MarketingHeading>
 
-                    <ol className="border border-ink">
-                        <AgentStep step="01" heading="Clone the repository">
+                    <ol className="border-b border-rule">
+                        <MarketingStep step="01" heading="Clone the repository">
                             The same source the repository link goes to. Nothing
                             is fetched from anywhere else, and nothing about
                             your copy is reported back here.
-                        </AgentStep>
+                        </MarketingStep>
 
-                        <AgentStep step="02" heading="Set up the Cloud CLI">
-                            <code className="font-mono text-ink">
+                        <MarketingStep step="02" heading="Set up the Cloud CLI">
+                            <code className="font-mono text-[0.875rem] text-ink">
                                 composer global require laravel/cloud-cli
                             </code>
                             , then{' '}
-                            <code className="font-mono text-ink">
+                            <code className="font-mono text-[0.875rem] text-ink">
                                 cloud auth
-                            </code>{' '}
-                            — which opens Laravel Cloud in your browser so you
+                            </code>
+                            , which opens Laravel Cloud in your browser so you
                             sign in as yourself. Your agent never sees a
                             password.
-                        </AgentStep>
+                        </MarketingStep>
 
-                        <AgentStep step="03" heading="Ship it">
-                            <code className="font-mono text-ink">
+                        <MarketingStep step="03" heading="Ship it">
+                            <code className="font-mono text-[0.875rem] text-ink">
                                 cloud ship
                             </code>{' '}
                             creates the application, provisions a Postgres
                             database, builds the front end and runs the
                             migrations.
-                        </AgentStep>
+                        </MarketingStep>
 
-                        <AgentStep step="04" heading="Start the two workers">
+                        <MarketingStep
+                            step="04"
+                            heading="Start the two workers"
+                        >
                             The scheduler decides when a digest is due and a
                             queue worker does the research and sends the mail.
-                            Both have to be running, or you get a site that
-                            looks perfectly fine and never emails anyone.
-                        </AgentStep>
+                            Both have to run, or you get a site that looks fine
+                            and never emails anyone.
+                        </MarketingStep>
 
-                        <AgentStep step="05" heading="Hand you the URL">
+                        <MarketingStep step="05" heading="Hand you the URL">
                             It watches the deploy land, then gives you the
                             address. Sign in with one of the addresses you
                             authorized, add your model key under Settings, and
                             add your company.
-                        </AgentStep>
+                        </MarketingStep>
                     </ol>
                 </section>
 
-                <section className="bg-ink text-paper-lit">
-                    <div className="mx-auto grid w-full max-w-5xl items-start gap-8 px-4 py-12 sm:px-10 sm:py-20 lg:grid-cols-[1fr_22rem] lg:gap-14">
-                        <div>
-                            <Eyebrow tone="pale">Or keep it local</Eyebrow>
+                <section className="mx-auto w-full max-w-3xl px-4 pb-20 sm:px-10 sm:pb-28">
+                    <MarketingHeading className="mb-4">
+                        It runs on your own box too.
+                    </MarketingHeading>
 
-                            <Display
-                                size="lg"
-                                className="my-4 max-w-[18ch] text-balance"
+                    <p className="max-w-[34rem] text-ink-soft">
+                        Cloud is the version with nothing to maintain. If you
+                        would rather keep it on a machine you own, the README
+                        sets it up in four commands — SQLite and a database
+                        queue, so there is nothing else to stand up.
+                    </p>
+
+                    <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+                        <Button asChild size="lg" variant="secondary">
+                            <a
+                                href={REPOSITORY_URL}
+                                target="_blank"
+                                rel="noreferrer"
                             >
-                                It runs on your own box too.
-                            </Display>
+                                <Github aria-hidden="true" />
+                                View the repository
+                            </a>
+                        </Button>
 
-                            <p className="max-w-[32rem] text-paper-lit/70">
-                                Cloud is the version with nothing to maintain.
-                                If you would rather keep it on a machine you
-                                own, the repository's README sets it up in four
-                                commands — SQLite and a database queue, so there
-                                is nothing else to stand up.
-                            </p>
-                        </div>
-
-                        <div className="border border-paper-lit/20 px-6 py-9">
-                            <p className="label-micro text-paper-lit/55">
-                                The source
-                            </p>
-
-                            <p className="mt-3.5 mb-6 text-paper-lit/70">
-                                Every prompt, migration and schedule Creeper
-                                has, in one repository.
-                            </p>
-
-                            <Button
-                                asChild
-                                size="lg"
-                                variant="secondary"
-                                className="w-full"
-                            >
-                                <a
-                                    href={REPOSITORY_URL}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    View the repository
-                                </a>
-                            </Button>
-
-                            <Button
-                                asChild
-                                size="lg"
-                                variant="link"
-                                className="mt-5 w-full text-paper-lit/70"
-                            >
-                                <Link href="/">Back to the landing page</Link>
-                            </Button>
-                        </div>
+                        <Link
+                            href="/"
+                            className="inline-flex items-center gap-1.5 text-[0.9375rem] text-ink-soft transition-colors hover:text-ink"
+                        >
+                            <ArrowLeft aria-hidden="true" className="size-4" />
+                            Back to the landing page
+                        </Link>
                     </div>
+
+                    <p className="mt-16 flex items-center gap-2.5 border-t border-rule pt-6 text-[0.9375rem] text-ink-soft">
+                        <LaravelMark className="size-5 shrink-0 text-ink" />
+                        Built with Laravel, made to run on Laravel Cloud.
+                    </p>
                 </section>
             </MarketingLayout>
 

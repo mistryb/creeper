@@ -14,6 +14,7 @@ export { EmptyLine, EmptyState } from './empty-state';
 export { CheckField, Field, FormActions } from './field';
 export { Meter } from './meter';
 export { Page } from './page';
+export { Pager } from './pager';
 export { Panel, PanelBar } from './panel';
 export { Score } from './score';
 export { ReceiptRow, StatTile } from './stat-tile';

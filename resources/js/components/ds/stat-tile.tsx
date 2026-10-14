@@ -32,7 +32,7 @@ export function StatTile({
     return (
         <div
             className={cn(
-                'border border-rule bg-card px-4 py-3.5 shadow-xs',
+                'rounded-card border border-rule bg-card px-4 py-3.5 shadow-xs',
                 className,
             )}
         >

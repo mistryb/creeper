@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Auth\AdminEmails;
 use App\Enums\CreepProvider;
+use App\Enums\Plan;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -14,6 +16,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Billable;
 
 /**
  * @property int $id
@@ -24,6 +27,9 @@ use Illuminate\Support\Str;
  * @property string|null $password Retired. Sign-in is by one-time code.
  * @property string|null $remember_token
  * @property int|null $current_business_id The business picked in the sidebar chooser.
+ * @property string|null $stripe_id
+ * @property Carbon|null $trial_ends_at End of the card-free trial a billed install starts every account on.
+ * @property Carbon|null $comped_at When an admin gave this account Unlimited for free.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Business> $businesses
@@ -35,7 +41,7 @@ use Illuminate\Support\Str;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use Billable, HasFactory, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -46,6 +52,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'trial_ends_at' => 'datetime',
+            'comped_at' => 'datetime',
         ];
     }
 
@@ -74,6 +82,12 @@ class User extends Authenticatable
          */
         if ($user->email_verified_at === null) {
             $user->forceFill(['email_verified_at' => now()])->save();
+        }
+
+        // A new account on a billed install gets a week with one company
+        // before it has to pick a plan. No card is asked for up front.
+        if ($user->wasRecentlyCreated && config('billing.enabled')) {
+            $user->forceFill(['trial_ends_at' => now()->addDays(config('billing.trial_days'))])->save();
         }
 
         return $user;
@@ -169,5 +183,85 @@ class User extends Authenticatable
             'key' => $key,
             'hint' => mb_substr($key, -4),
         ]);
+    }
+
+    /**
+     * Whether this account can open the admin panel.
+     */
+    public function isAdmin(): bool
+    {
+        return app(AdminEmails::class)->includes($this->email);
+    }
+
+    /**
+     * Whether an admin gave this account Unlimited without a subscription.
+     */
+    public function isComped(): bool
+    {
+        return $this->comped_at !== null;
+    }
+
+    /**
+     * The plan this account is paying for, counting a subscription that is
+     * cancelled but still inside the period it paid for. Null when there is
+     * no such subscription, or it is on a price this install does not sell.
+     */
+    public function plan(): ?Plan
+    {
+        $subscription = $this->subscription();
+
+        if ($subscription === null || ! $subscription->valid()) {
+            return null;
+        }
+
+        return Plan::fromPriceId($subscription->stripe_price);
+    }
+
+    /**
+     * How many companies this account gets digests about. Null means no
+     * limit; zero means it has to pick a plan first.
+     *
+     * A self-hosted install has no limit. On a billed one, a comp beats a
+     * plan, a plan beats the trial, and the trial covers one company.
+     */
+    public function businessLimit(): ?int
+    {
+        if (! config('billing.enabled') || $this->isComped()) {
+            return null;
+        }
+
+        if ($plan = $this->plan()) {
+            return $plan->businessLimit();
+        }
+
+        return $this->onGenericTrial() ? 1 : 0;
+    }
+
+    /**
+     * Whether this account may set up another company.
+     */
+    public function canAddBusiness(): bool
+    {
+        $limit = $this->businessLimit();
+
+        return $limit === null || $this->businesses()->count() < $limit;
+    }
+
+    /**
+     * Whether Creeper should spend effort on this company: discovery, and its
+     * digests. An account over its limit — after moving down to one company,
+     * or once its trial or subscription has ended — keeps its companies, but
+     * only the earliest ones it set up stay covered.
+     */
+    public function covers(Business $business): bool
+    {
+        $limit = $this->businessLimit();
+
+        if ($limit === null) {
+            return true;
+        }
+
+        return $business->user_id === $this->id
+            && $this->businesses()->where('id', '<', $business->id)->count() < $limit;
     }
 }

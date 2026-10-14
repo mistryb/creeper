@@ -14,8 +14,10 @@
  * semantic token is mapped onto those tokens — so a stock component picks up
  * the house style without being touched. Three rules hold the look together:
  *
- *   1. Nothing is round. The radius scale is zeroed; only `rounded-full`
- *      survives, for dots and avatars.
+ *   1. Cards are round, controls are square. The radius scale is zeroed, so
+ *      buttons, inputs and menus stay square; a card-like surface asks for
+ *      `rounded-card` by name, and `rounded-full` survives for dots and
+ *      avatars.
  *   2. Shadows are hard offsets, never blurs. Paper stacks, it does not float.
  *   3. Anything a machine printed — labels, counts, prices, statuses — is set
  *      in mono. Anything a person wrote is set in sans.
@@ -79,6 +81,9 @@
     --radius-2xl: 0px;
     --radius-3xl: 0px;
     --radius-4xl: 0px;
+
+    /* The one round corner: every card-like surface, and the nav bar. */
+    --radius-card: 1.25rem;
 
     /* ── Shadow: hard offsets ────────────────────────────────────────────── */
 

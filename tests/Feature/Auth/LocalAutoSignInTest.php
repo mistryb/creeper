@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -85,4 +86,32 @@ it('does nothing outside the local environment', function () {
 
     expect(Auth::check())->toBeFalse()
         ->and(User::query()->count())->toBe(0);
+});
+
+it('stays signed out after you sign out', function () {
+    runningLocally();
+
+    $this->get(route('dashboard'))->assertOk();
+
+    // CSRF is only skipped in the "testing" environment, and this runs as local.
+    $this->withoutMiddleware(PreventRequestForgery::class)
+        ->post(route('logout'))
+        ->assertRedirect('/');
+
+    // Landing on "/" afterwards used to sign the account straight back in.
+    $this->get('/');
+    expect(Auth::check())->toBeFalse();
+
+    $this->get(route('dashboard'))->assertRedirect(route('login'));
+    expect(Auth::check())->toBeFalse();
+});
+
+it('still signs in for real after signing out', function () {
+    runningLocally();
+
+    $this->get(route('dashboard'));
+    $this->withoutMiddleware(PreventRequestForgery::class)->post(route('logout'));
+
+    $user = User::query()->sole();
+    $this->actingAs($user)->get(route('dashboard'))->assertOk();
 });

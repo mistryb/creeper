@@ -35,8 +35,6 @@ export function Eyebrow({
 }
 
 const displaySizes = {
-    /* The landing hero, and nothing else. */
-    hero: 'text-[clamp(2.6rem,9.5vw,5.5rem)]',
     /* A page title. */
     lg: 'text-[clamp(1.8rem,5vw,2.8rem)] leading-tight',
     /* A section heading. */

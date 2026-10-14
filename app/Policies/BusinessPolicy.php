@@ -7,7 +7,8 @@ use App\Models\User;
 
 /**
  * A business belongs to the account that set it up, and nobody else may see
- * or change it.
+ * or change it. On a billed install, how many an account may set up depends
+ * on its plan.
  */
 class BusinessPolicy
 {
@@ -23,7 +24,7 @@ class BusinessPolicy
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->canAddBusiness();
     }
 
     public function update(User $user, Business $business): bool

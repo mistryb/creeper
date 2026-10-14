@@ -75,7 +75,7 @@ it('pitches the landing page as a competitor digest', function () {
     $page = file_get_contents(resource_path('js/pages/welcome.tsx'));
 
     expect($page)
-        ->toContain('Competitor digest')
+        ->toContain('Always be creeping')
         ->toContain('Know what your rivals')
         ->not->toContain('Put a page on watch')
         ->not->toContain('watched page');
@@ -105,4 +105,38 @@ it('offers the github and laravel cloud buttons in the hero and at the foot of t
 
     expect(substr_count($page, 'Deploy on Laravel Cloud'))->toBe(1)
         ->and(substr_count($page, '<RunButtons '))->toBe(2);
+});
+
+it('sells the plans on the landing page of a billed install', function () {
+    config(['marketing.enabled' => true]);
+    enableBilling();
+
+    $this->get(route('home'))
+        ->assertInertia(fn ($page) => $page
+            ->component('welcome')
+            ->has('plans', 2)
+            ->where('plans.0.price', 5)
+            ->where('plans.1.price', 20)
+            ->where('trialDays', 7));
+});
+
+it('pitches running your own copy when the install has nothing to sell', function () {
+    config(['marketing.enabled' => true]);
+
+    $this->get(route('home'))
+        ->assertInertia(fn ($page) => $page->where('plans', null));
+});
+
+/*
+ * The homepage is the one public page with a way back in: a Log in pill in its
+ * own tab bar, for visitors who are not signed in. The shared chrome still has
+ * none (see above), so the deploy page keeps pointing at its own prompt.
+ */
+it('offers signed-out visitors a log in pill in the homepage tab bar', function () {
+    $page = file_get_contents(resource_path('js/pages/welcome.tsx'));
+
+    expect($page)
+        ->toContain('{!auth.user && (')
+        ->toContain('href={login()}')
+        ->toContain('Log in');
 });

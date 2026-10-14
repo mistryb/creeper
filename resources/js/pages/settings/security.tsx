@@ -50,7 +50,7 @@ export default function Security({ otherSessions }: Props) {
                         below if you have lost a device.
                     </EmptyState>
                 ) : (
-                    <div className="border border-rule bg-card px-4 py-3 shadow-xs">
+                    <div className="rounded-card border border-rule bg-card px-4 py-3 shadow-xs">
                         <p className="label-micro text-muted-foreground">
                             Other live sessions
                         </p>

@@ -41,7 +41,7 @@ export function CopyDock({
                 className,
             )}
         >
-            <div className="flex items-center gap-3 border border-ink bg-paper-lit p-2 shadow-stamp sm:gap-4 sm:pl-4">
+            <div className="flex items-center gap-3 rounded-card border border-ink bg-paper-lit p-2 shadow-stamp sm:gap-4 sm:pl-4">
                 {title && (
                     <span className="hidden items-center gap-2 label-micro text-ink-soft sm:flex">
                         <i

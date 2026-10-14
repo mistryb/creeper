@@ -74,7 +74,7 @@ function CompetitorSection({
             {section.items.length === 0 ? (
                 <EmptyLine>Quiet this period</EmptyLine>
             ) : (
-                <ul className="divide-y divide-rule border border-rule bg-card shadow-xs">
+                <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card shadow-xs">
                     {section.items.map((item, index) => (
                         <li key={index} className="space-y-1 px-4 py-3 text-sm">
                             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

@@ -22,6 +22,9 @@ use Symfony\Component\HttpFoundation\Response;
  * has to pass {@see AuthorizedEmails} — a restricted install auto-signs in as
  * somebody already on its list or not at all. Set `LOCAL_AUTO_SIGN_IN=false`
  * to exercise the real sign-in flow instead.
+ *
+ * Signing out pauses it for the rest of that browser session ({@see pause()}),
+ * so logging out on a checkout actually leaves you logged out.
  */
 class AuthenticateLocalUser
 {
@@ -37,6 +40,11 @@ class AuthenticateLocalUser
      * @var array<int, string>
      */
     protected const EXCEPT = ['login', 'login/*', 'logout', 'webhooks/*'];
+
+    /**
+     * The session key that marks this browser as having signed out.
+     */
+    protected const PAUSED = 'local_auto_sign_in.paused';
 
     public function __construct(protected AuthorizedEmails $authorizedEmails) {}
 
@@ -65,7 +73,20 @@ class AuthenticateLocalUser
             return false;
         }
 
-        return true;
+        return ! $request->session()->get(self::PAUSED, false);
+    }
+
+    /**
+     * Stop signing this browser in, because its user just signed out.
+     *
+     * Without this the redirect after logging out lands on a page that signs
+     * the account straight back in. Stored in the session logout leaves
+     * behind, so it lasts until the browser session ends; signing in for real
+     * in the meantime works as usual.
+     */
+    public static function pause(Request $request): void
+    {
+        $request->session()->put(self::PAUSED, true);
     }
 
     /**

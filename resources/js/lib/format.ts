@@ -70,6 +70,17 @@ export function formatDateTime(date: string | null | undefined): string {
     }).format(new Date(date));
 }
 
+/** A day with no time: "Oct 21, 2026". Fixed locale, as above. */
+export function formatDate(date: string | null | undefined): string {
+    if (!date) {
+        return '—';
+    }
+
+    return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(
+        new Date(date),
+    );
+}
+
 export function formatDuration(milliseconds: number | null): string {
     if (milliseconds === null) {
         return '—';

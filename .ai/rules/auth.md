@@ -17,7 +17,7 @@ Sign-in calls `Auth::login($user, remember: true)`, so a browser stays signed in
 Because the address is the only credential, changing it goes through `pending_email` and a code sent to the new address (ProfileController::confirmEmail). Never write `users.email` directly from a request.
 
 ## AUTHORIZED_EMAILS is the whole user administration
-`AUTHORIZED_EMAILS` (config `auth.authorized_emails`, read by `App\Auth\AuthorizedEmails`) names every address allowed an account. Empty means no restriction, which is how local and public installs run. Adding somebody is an edit to the variable and a redeploy — there is no invite flow and no admin screen, deliberately.
+`AUTHORIZED_EMAILS` (config `auth.authorized_emails`, read by `App\Auth\AuthorizedEmails`) names every address allowed an account. Empty means no restriction, which is how local and public installs run. Adding somebody is an edit to the variable and a redeploy — there is no invite flow, deliberately. The admin panel (`ADMIN_EMAILS`, see admin.md) can see and comp accounts but never creates, invites or authorizes one.
 
 Because sign-in and sign-up are one act, the check has to hold everywhere an address becomes an account: `LoginCodeController::store`/`update`, and `App\Rules\AuthorizedEmail` in `ProfileValidationRules::emailRules()` for an address change.
 

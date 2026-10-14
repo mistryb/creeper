@@ -3,9 +3,12 @@ import type { ReactNode } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { CompanyMenu } from '@/components/company-menu';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { formatRelative } from '@/lib/format';
 import { navPill } from '@/lib/nav-pill';
 import { cn } from '@/lib/utils';
 import { dashboard, logout } from '@/routes';
+import { overview as adminOverview } from '@/routes/admin';
+import { edit as billingSettings } from '@/routes/billing';
 import { index as competitors } from '@/routes/businesses/competitors';
 import { index as digests } from '@/routes/businesses/digests';
 import { edit as settings } from '@/routes/profile';
@@ -18,7 +21,7 @@ import type { RouteDefinition } from '@/wayfinder';
  * the column is the only furniture.
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
-    const { auth, businessChooser } = usePage().props;
+    const { auth, businessChooser, billing } = usePage().props;
     const company = businessChooser.current;
 
     return (
@@ -44,13 +47,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
                     {/*
                      * A contained bar, not one across the page: it is exactly
-                     * as wide as the column it heads. Its rounded corner is
-                     * set explicitly because the radius scale is zeroed —
-                     * like the pills, a deliberate exception (see JS rules).
+                     * as wide as the column it heads. It takes the card
+                     * radius, like every other contained surface.
                      */}
                     <nav
                         aria-label="Main"
-                        className="flex w-full flex-wrap items-center justify-center gap-1 rounded-[1.25rem] border border-rule bg-card px-3 py-2.5 label-micro"
+                        className="flex w-full flex-wrap items-center justify-center gap-1 rounded-card border border-rule bg-card px-3 py-2.5 label-micro"
                     >
                         {company && (
                             <>
@@ -63,7 +65,35 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                             </>
                         )}
                         <NavLink href={settings()}>Settings</NavLink>
+                        {auth.isAdmin && (
+                            <NavLink href={adminOverview()}>Admin</NavLink>
+                        )}
                     </nav>
+
+                    {billing?.needsPlan && (
+                        <PlanNotice tone="warn">
+                            Digests are paused ·{' '}
+                            <Link
+                                href={billingSettings()}
+                                className="underline underline-offset-4"
+                            >
+                                Pick a plan
+                            </Link>
+                        </PlanNotice>
+                    )}
+
+                    {billing?.trialEndsAt && (
+                        <PlanNotice>
+                            Free trial ends{' '}
+                            {formatRelative(billing.trialEndsAt)} ·{' '}
+                            <Link
+                                href={billingSettings()}
+                                className="underline underline-offset-4 hover:text-ink"
+                            >
+                                Pick a plan
+                            </Link>
+                        </PlanNotice>
+                    )}
                 </header>
 
                 <main className="flex-1">{children}</main>
@@ -83,6 +113,30 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </footer>
             </div>
         </div>
+    );
+}
+
+/**
+ * One quiet line under the bar about the account's plan, on a billed install
+ * only. Amber when digests have stopped, so it carries the word as well as the
+ * colour.
+ */
+function PlanNotice({
+    children,
+    tone = 'muted',
+}: {
+    children: ReactNode;
+    tone?: 'muted' | 'warn';
+}) {
+    return (
+        <p
+            className={cn(
+                'label-micro',
+                tone === 'warn' ? 'text-ribbon-amber' : 'text-muted-foreground',
+            )}
+        >
+            {children}
+        </p>
     );
 }
 

@@ -21,7 +21,7 @@ export function Panel({
     return (
         <div
             className={cn(
-                'border border-ink bg-card',
+                'overflow-hidden rounded-card border border-ink bg-card',
                 lifted && 'shadow-stamp',
                 className,
             )}

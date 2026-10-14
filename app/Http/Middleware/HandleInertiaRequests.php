@@ -41,8 +41,32 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                'isAdmin' => fn (): bool => (bool) $request->user()?->isAdmin(),
             ],
             'businessChooser' => fn (): array => $this->businessChooser($request),
+            'billing' => fn (): ?array => $this->billing($request),
+        ];
+    }
+
+    /**
+     * Where the signed-in account stands with billing, for the header's
+     * notice and the Billing tab. Null on a self-hosted install, which is how
+     * the front end knows to say nothing about money at all.
+     *
+     * @return array{plan: string|null, trialEndsAt: string|null, needsPlan: bool}|null
+     */
+    private function billing(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if ($user === null || ! config('billing.enabled')) {
+            return null;
+        }
+
+        return [
+            'plan' => $user->plan()?->value,
+            'trialEndsAt' => $user->onGenericTrial() ? $user->trial_ends_at?->toIso8601String() : null,
+            'needsPlan' => $user->businessLimit() === 0,
         ];
     }
 

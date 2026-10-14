@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Settings\ApiKeyController;
+use App\Http\Controllers\Settings\BillingController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
@@ -52,4 +53,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/api-keys/{api_key}', [ApiKeyController::class, 'destroy'])
         ->middleware('throttle:6,1')
         ->name('api-keys.destroy');
+
+    /*
+     * The plan this account pays for. Every action 404s on a self-hosted
+     * install — checked per request, not here, so `route:cache` cannot bake
+     * the answer in. Starting a subscription and opening the portal each
+     * create a Stripe session, so both are throttled.
+     */
+    Route::get('settings/billing', [BillingController::class, 'edit'])->name('billing.edit');
+
+    Route::post('settings/billing/{plan}/checkout', [BillingController::class, 'checkout'])
+        ->middleware('throttle:6,1')
+        ->name('billing.checkout');
+
+    Route::put('settings/billing/{plan}', [BillingController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('billing.update');
+
+    Route::post('settings/billing/portal', [BillingController::class, 'portal'])
+        ->middleware('throttle:6,1')
+        ->name('billing.portal');
 });

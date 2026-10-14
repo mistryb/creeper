@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\AuthenticateLocalUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,9 @@ class LogoutController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // Otherwise a local checkout signs straight back in on the redirect.
+        AuthenticateLocalUser::pause($request);
 
         return redirect('/');
     }

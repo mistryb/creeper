@@ -1,18 +1,20 @@
 import { Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
+import { navPill } from '@/lib/nav-pill';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
 /**
- * The chrome the public pages share: an ink header rule with the wordmark and
- * the footer strip. Pages own everything between them, so the landing page can
- * run full-bleed sections while a narrower page like the deploy walkthrough
- * keeps the same margins.
+ * The chrome the public pages share, headed the same way as the signed-in
+ * app: the wordmark centred, then a contained, rounded bar of pills exactly as
+ * wide as the landing page's column. Pages own everything below it, so a wider
+ * page like the deploy walkthrough keeps its own margins.
  *
- * The public pages do not offer a way to sign in. They are written for someone
- * who does not have an account yet, and every page sends that visitor to the
- * same place — the sign-up call to action in its own copy — rather than
- * competing with it from the chrome. Someone who is already signed in gets a
+ * The chrome itself offers no way to sign in: the public pages are written for
+ * someone who does not have an account yet, and each sends that visitor to the
+ * call to action in its own copy. A page that wants a way back in passes one
+ * through `nav` — the homepage does. Someone who is already signed in gets a
  * link back to the dashboard instead.
  */
 export default function MarketingLayout({
@@ -20,49 +22,53 @@ export default function MarketingLayout({
     nav,
 }: {
     children: ReactNode;
-    /** Page-specific links, placed at the end of the header nav. */
+    /** Page-specific links, placed at the start of the header bar. */
     nav?: ReactNode;
 }) {
     const { auth } = usePage().props;
 
     return (
         <div className="min-h-screen bg-paper font-sans text-ink">
-            <header className="bg-ink text-paper-lit">
-                <div className="mx-auto flex min-h-10 w-full max-w-5xl items-center justify-between gap-4 px-4 sm:px-10">
-                    <Link
-                        href="/"
-                        className="inline-flex items-center gap-2 label-micro text-[0.8125rem] font-semibold tracking-[0.22em]"
-                    >
-                        <AppLogoIcon className="size-4" />
-                        Creeper
-                    </Link>
+            <header className="mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 pt-8 sm:px-10 sm:pt-12">
+                <Link
+                    href="/"
+                    className="inline-flex items-center gap-2 label-micro text-[0.8125rem] font-semibold tracking-[0.22em] text-ink"
+                >
+                    <AppLogoIcon className="size-4" />
+                    Creeper
+                </Link>
 
-                    <nav className="flex items-center gap-3 label-micro sm:gap-7">
+                {(nav || auth.user) && (
+                    <nav
+                        aria-label="Main"
+                        className="flex w-full flex-wrap items-center justify-center gap-1 rounded-card border border-rule bg-card px-3 py-2.5 label-micro"
+                    >
                         {nav}
                         {auth.user && (
                             <Link
                                 href={dashboard()}
-                                className="bg-paper-lit px-3 py-1.5 text-ink transition-colors hover:bg-white"
+                                className={cn(
+                                    navPill,
+                                    'border-ink bg-ink text-paper-lit hover:bg-ink-lift',
+                                )}
                             >
                                 Dashboard
                             </Link>
                         )}
                     </nav>
-                </div>
+                )}
             </header>
 
             <main>{children}</main>
 
-            <footer className="bg-ink text-paper-lit/55">
-                <div className="mx-auto flex min-h-12 w-full max-w-5xl items-center justify-between gap-4 border-t border-paper-lit/20 px-4 label-micro sm:px-10">
-                    <span>Creeper · a small tool for keeping tabs</span>
-                </div>
+            <footer className="flex flex-wrap items-center justify-center py-10 label-micro text-muted-foreground">
+                <span>Creeper · a small tool for keeping tabs</span>
             </footer>
         </div>
     );
 }
 
-/** A header link to a section of the current page. */
+/** A pill in the header bar linking to a section of the current page. */
 export function MarketingNavLink({
     href,
     children,
@@ -73,7 +79,10 @@ export function MarketingNavLink({
     return (
         <a
             href={href}
-            className="hidden text-paper-lit/70 transition-colors hover:text-paper-lit sm:inline"
+            className={cn(
+                navPill,
+                'border-rule text-muted-foreground hover:border-ink hover:text-ink',
+            )}
         >
             {children}
         </a>

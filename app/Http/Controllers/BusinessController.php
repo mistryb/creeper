@@ -31,9 +31,15 @@ class BusinessController extends Controller
     /**
      * Show the form for setting up a company.
      */
-    public function create(Request $request): Response
+    public function create(Request $request): Response|RedirectResponse
     {
-        $this->authorize('create', Business::class);
+        // Out of room on a billed install: the way on is a bigger plan, not
+        // a 403.
+        if ($request->user()->cannot('create', Business::class)) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Pick a plan that covers another company first.')]);
+
+            return to_route('billing.edit');
+        }
 
         return Inertia::render('businesses/create', $this->formOptions($request));
     }

@@ -1,9 +1,10 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import { Page, SectionHeading } from '@/components/ds';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { index as apiKeys } from '@/routes/api-keys';
+import { edit as editBilling } from '@/routes/billing';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
@@ -20,6 +21,12 @@ const navItems: NavItem[] = [
  */
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
+    const { billing } = usePage().props;
+
+    // A self-hosted install has nothing to pay for, so no tab to pay with.
+    const items: NavItem[] = billing
+        ? [...navItems, { title: 'Billing', href: editBilling(), icon: null }]
+        : navItems;
 
     return (
         <Page>
@@ -29,7 +36,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 className="flex gap-5 border-b border-rule label-micro"
                 aria-label="Settings"
             >
-                {navItems.map((item, index) => {
+                {items.map((item, index) => {
                     const current = isCurrentOrParentUrl(item.href);
 
                     return (

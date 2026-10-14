@@ -20,6 +20,12 @@ class CompetitorDiscoveryController extends Controller
     {
         $this->authorize('update', $business);
 
+        if (! $business->user->covers($business)) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Your plan does not cover this company.')]);
+
+            return to_route('billing.edit');
+        }
+
         if ($business->api_key_id === null) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Pick an API key for this company first.')]);
 

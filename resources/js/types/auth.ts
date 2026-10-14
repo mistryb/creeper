@@ -11,4 +11,6 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /** Whether this account's address is in ADMIN_EMAILS. */
+    isAdmin: boolean;
 };

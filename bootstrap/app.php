@@ -18,9 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['sidebar_state']);
 
-        // The creep callback authenticates itself by its signed URL.
+        // The creep callback authenticates itself by its signed URL, and
+        // Stripe's webhook by its signature (STRIPE_WEBHOOK_SECRET).
         $middleware->validateCsrfTokens(except: [
             'webhooks/creep/*',
+            'stripe/*',
         ]);
 
         $middleware->web(append: [

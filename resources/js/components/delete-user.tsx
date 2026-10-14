@@ -32,7 +32,7 @@ export default function DeleteUser({ email }: { email: string }) {
                 description="Your account and everything Creeper collected for it."
             />
 
-            <div className="space-y-4 border border-ribbon-red/35 bg-ribbon-red/8 p-4">
+            <div className="space-y-4 rounded-card border border-ribbon-red/35 bg-ribbon-red/8 p-4">
                 <div className="space-y-0.5 text-ribbon-red">
                     <p className="label-mono uppercase">Warning</p>
                     <p className="text-sm">

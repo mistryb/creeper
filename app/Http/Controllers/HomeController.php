@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Plan;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,6 +26,11 @@ class HomeController extends Controller
             return to_route('login');
         }
 
-        return Inertia::render('welcome');
+        // A billed install sells its plans; a self-hosted one has none to
+        // sell, and the page pitches running your own copy instead.
+        return Inertia::render('welcome', [
+            'plans' => config('billing.enabled') ? Plan::options() : null,
+            'trialDays' => config('billing.trial_days'),
+        ]);
     }
 }

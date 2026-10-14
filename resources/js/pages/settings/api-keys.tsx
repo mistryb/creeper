@@ -47,7 +47,7 @@ export default function ApiKeys({ keys, providers }: Props) {
                     description="Creeper finds competitors and writes digests with your keys, so you pay your model provider directly. Add as many as you like — each company says which one it spends."
                 />
 
-                <div className="border border-rule bg-card shadow-xs">
+                <div className="overflow-hidden rounded-card border border-rule bg-card shadow-xs">
                     {keys.length === 0 ? (
                         <EmptyLine>No keys yet</EmptyLine>
                     ) : (

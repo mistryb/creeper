@@ -122,7 +122,7 @@ function ConfirmEmailChange({
     const [code, setCode] = useState('');
 
     return (
-        <div className="space-y-4 border border-ribbon-amber/35 bg-ribbon-amber/8 p-4">
+        <div className="space-y-4 rounded-card border border-ribbon-amber/35 bg-ribbon-amber/8 p-4">
             <div className="space-y-0.5 text-ribbon-amber">
                 <p className="label-mono uppercase">Confirm your new address</p>
                 <p className="text-sm">
