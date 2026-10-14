@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\ApiKey;
 use App\Models\Business;
 use App\Models\User;
+use Illuminate\Support\Facades\Queue;
 
 it('shares no businesses with an account that has none', function () {
     $this->actingAs(User::factory()->create())
@@ -57,9 +59,13 @@ it('makes a newly set-up business the current one', function () {
     $user = User::factory()->create();
     Business::factory()->for($user)->create();
 
+    Queue::fake();
+
     $this->actingAs($user)->post(route('businesses.store'), [
         'name' => 'Northwind Tea',
         'description' => 'Loose-leaf tea.',
+        'digest_frequency' => 'weekly',
+        'api_key_id' => ApiKey::factory()->for($user)->create()->id,
     ]);
 
     expect($user->fresh()->currentBusiness->name)->toBe('Northwind Tea');

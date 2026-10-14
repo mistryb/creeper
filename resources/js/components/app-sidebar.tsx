@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, ScanSearch, Users } from 'lucide-react';
+import { LayoutGrid, Mail, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { NavMain } from '@/components/nav-main';
@@ -14,8 +14,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import { index as businessAnalysis } from '@/routes/businesses/analysis';
 import { index as competitors } from '@/routes/businesses/competitors';
+import { index as digests } from '@/routes/businesses/digests';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
@@ -32,14 +32,14 @@ export function AppSidebar() {
         ...(current
             ? [
                   {
-                      title: 'Analysis',
-                      href: businessAnalysis(current.id),
-                      icon: ScanSearch,
-                  },
-                  {
                       title: 'Competitors',
                       href: competitors(current.id),
                       icon: Users,
+                  },
+                  {
+                      title: 'Digests',
+                      href: digests(current.id),
+                      icon: Mail,
                   },
               ]
             : []),

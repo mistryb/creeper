@@ -1,7 +1,7 @@
 <?php
 
 use App\Auth\LoginCodes;
-use App\Console\Commands\DispatchDueCreeps;
+use App\Console\Commands\DispatchDueDigests;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -10,7 +10,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command(DispatchDueCreeps::class)
+Schedule::command(DispatchDueDigests::class)
     ->everyMinute()
     ->withoutOverlapping();
 

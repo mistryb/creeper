@@ -2,7 +2,7 @@
 
 namespace App\Rules;
 
-use App\Creeping\Fetching\PageFetcher;
+use App\Fetching\PageFetcher;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\Validator;

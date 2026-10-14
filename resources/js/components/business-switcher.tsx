@@ -40,7 +40,7 @@ export function BusinessSwitcher() {
                             size="lg"
                             className="data-[state=open]:bg-sidebar-accent"
                             tooltip={{
-                                children: current?.name ?? 'Choose a business',
+                                children: current?.name ?? 'Choose a company',
                             }}
                             data-test="business-switcher"
                         >
@@ -53,7 +53,7 @@ export function BusinessSwitcher() {
                             </div>
                             <div className="grid flex-1 text-left leading-tight">
                                 <span className="label-micro text-sidebar-foreground/60">
-                                    Business
+                                    Company
                                 </span>
                                 <span className="truncate text-sm font-medium">
                                     {current?.name ?? 'None yet'}
@@ -78,7 +78,7 @@ export function BusinessSwitcher() {
                         {businesses.all.length > 0 && (
                             <>
                                 <DropdownMenuLabel className="label-micro text-muted-foreground">
-                                    Businesses
+                                    Companies
                                 </DropdownMenuLabel>
                                 <DropdownMenuGroup>
                                     {businesses.all.map((business) => (
@@ -101,7 +101,7 @@ export function BusinessSwitcher() {
                                                 {business.id ===
                                                     current?.id && (
                                                     <Check
-                                                        aria-label="Current business"
+                                                        aria-label="Current company"
                                                         className="ml-auto"
                                                     />
                                                 )}
@@ -121,7 +121,7 @@ export function BusinessSwitcher() {
                                     onClick={cleanup}
                                 >
                                     <Plus aria-hidden />
-                                    New business
+                                    New company
                                 </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>

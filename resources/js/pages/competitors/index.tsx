@@ -11,7 +11,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { hostOf } from '@/lib/format';
+import { formatRelative, hostOf } from '@/lib/format';
 import { create, index } from '@/routes/businesses/competitors';
 import { show } from '@/routes/competitors';
 import type { Business, Competitor, ResourceCollection } from '@/types';
@@ -41,7 +41,7 @@ export default function CompetitorsIndex({
                         <Button asChild>
                             <Link href={create(business.id)}>
                                 <Plus aria-hidden />
-                                New competitor
+                                Add a competitor
                             </Link>
                         </Button>
                     }
@@ -55,14 +55,14 @@ export default function CompetitorsIndex({
                             <Button asChild>
                                 <Link href={create(business.id)}>
                                     <Plus aria-hidden />
-                                    Add your first competitor
+                                    Add one yourself
                                 </Link>
                             </Button>
                         }
                     >
-                        Add the companies you are up against. Then point Creeper
-                        at their pricing pages and changelogs, or have it
-                        analyse them.
+                        Creeper looks for them when a company is set up, and
+                        again whenever you ask from the dashboard. Anyone it
+                        misses, add here.
                     </EmptyState>
                 ) : (
                     <Table>
@@ -72,13 +72,14 @@ export default function CompetitorsIndex({
                         <TableHeader>
                             <TableRow>
                                 <TableHead scope="col">Competitor</TableHead>
-                                <TableHead scope="col">Watching</TableHead>
+                                <TableHead scope="col">Why</TableHead>
+                                <TableHead scope="col">Source</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {competitors.data.map((competitor) => (
                                 <TableRow key={competitor.id}>
-                                    <TableCell className="max-w-xl whitespace-normal">
+                                    <TableCell className="whitespace-normal">
                                         <Link
                                             href={show(competitor.id)}
                                             className="font-medium underline decoration-transparent underline-offset-4 hover:decoration-ribbon"
@@ -91,16 +92,16 @@ export default function CompetitorsIndex({
                                                 {hostOf(competitor.url)}
                                             </p>
                                         )}
-                                        {competitor.description && (
-                                            <p className="line-clamp-2 text-sm text-muted-foreground">
-                                                {competitor.description}
-                                            </p>
-                                        )}
+                                    </TableCell>
+                                    <TableCell className="max-w-xl text-sm whitespace-normal text-muted-foreground">
+                                        {competitor.reason ??
+                                            competitor.description ??
+                                            '—'}
                                     </TableCell>
                                     <TableCell className="font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
-                                        {competitor.watched_pages_count === 1
-                                            ? '1 page'
-                                            : `${competitor.watched_pages_count ?? 0} pages`}
+                                        {competitor.discovered_at
+                                            ? `found ${formatRelative(competitor.discovered_at)}`
+                                            : 'added by you'}
                                     </TableCell>
                                 </TableRow>
                             ))}

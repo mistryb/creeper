@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Models\Competitor;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Carbon;
 
 /**
  * @extends Factory<Competitor>
@@ -22,7 +23,21 @@ class CompetitorFactory extends Factory
             'name' => fake()->unique()->company(),
             'url' => 'https://'.fake()->unique()->domainName(),
             'description' => fake()->sentence(),
+            'discovered_at' => null,
+            'reason' => null,
         ];
+    }
+
+    /**
+     * A competitor Creeper found rather than the user.
+     */
+    public function discovered(): static
+    {
+        return $this->state(fn (): array => [
+            'description' => null,
+            'discovered_at' => Carbon::now(),
+            'reason' => fake()->sentence(),
+        ]);
     }
 
     /**

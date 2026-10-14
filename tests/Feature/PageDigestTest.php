@@ -1,6 +1,6 @@
 <?php
 
-use App\Creeping\Fetching\PageDigest;
+use App\Fetching\PageDigest;
 
 it('prefers a JSON-LD product block, and keeps it first', function () {
     $digest = PageDigest::fromHtml(<<<'HTML'
@@ -54,7 +54,7 @@ it('skips a broken JSON-LD block without losing a good one', function () {
         ->and($digest->structuredData[0]['name'])->toBe('Kettle');
 });
 
-it('picks up open graph and product meta tags', function () {
+it('picks up open graph and page meta tags, and leaves shop-only ones', function () {
     $digest = PageDigest::fromHtml(<<<'HTML'
         <html><head>
             <title>Stainless Kettle — Shop</title>
@@ -67,7 +67,8 @@ it('picks up open graph and product meta tags', function () {
         HTML, 12000);
 
     expect($digest->meta)->toHaveKey('og:title', 'Stainless Kettle')
-        ->and($digest->meta)->toHaveKey('product:price:amount', '24.99')
+        // A homepage is read to learn what a company is, not what it charges.
+        ->and($digest->meta)->not->toHaveKey('product:price:amount')
         ->and($digest->meta)->toHaveKey('title', 'Stainless Kettle — Shop')
         ->and($digest->meta)->toHaveKey('canonical', 'https://shop.test/p/1')
         ->and($digest->meta)->not->toHaveKey('viewport');
