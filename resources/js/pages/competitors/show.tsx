@@ -1,16 +1,9 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { ExternalLink } from 'lucide-react';
 import CompetitorController from '@/actions/App/Http/Controllers/CompetitorController';
 import { CompetitorFields } from '@/components/competitor/competitor-fields';
 import { FormActions, Page, SectionHeading } from '@/components/ds';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     Dialog,
     DialogClose,
@@ -22,7 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { formatRelative, hostOf } from '@/lib/format';
 import { index as competitorsIndex } from '@/routes/businesses/competitors';
-import { show } from '@/routes/competitors';
 import type { Business, Competitor } from '@/types';
 
 export default function ShowCompetitor({
@@ -32,18 +24,20 @@ export default function ShowCompetitor({
     business: { data: Business };
     competitor: { data: Competitor };
 }) {
-    setLayoutProps({
-        breadcrumbs: [
-            { title: 'Competitors', href: competitorsIndex(business.id) },
-            { title: competitor.name, href: show(competitor.id) },
-        ],
-    });
-
     return (
         <>
             <Head title={competitor.name} />
 
             <Page>
+                <p className="label-micro text-muted-foreground">
+                    <Link
+                        href={competitorsIndex(business.id)}
+                        className="hover:text-ink"
+                    >
+                        ← Competitors
+                    </Link>
+                </p>
+
                 <SectionHeading
                     title={competitor.name}
                     note={
@@ -76,46 +70,43 @@ export default function ShowCompetitor({
                     }
                 />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>About {competitor.name}</CardTitle>
-                        <CardDescription>
+                <section className="space-y-5 border-t border-rule pt-6">
+                    <div className="space-y-1">
+                        <h2 className="label-micro text-ink">
+                            About {competitor.name}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
                             Handed to the model every time a digest is written,
                             so it knows what to look for.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Form
-                            {...CompetitorController.update.form(competitor.id)}
-                            options={{ preserveScroll: true }}
-                            className="max-w-xl space-y-5"
-                        >
-                            {({ processing, errors }) => (
-                                <>
-                                    <CompetitorFields
-                                        competitor={competitor}
-                                        errors={errors}
-                                    />
+                        </p>
+                    </div>
+                    <Form
+                        {...CompetitorController.update.form(competitor.id)}
+                        options={{ preserveScroll: true }}
+                        className="max-w-xl space-y-5"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                <CompetitorFields
+                                    competitor={competitor}
+                                    errors={errors}
+                                />
 
-                                    <FormActions
-                                        aside={
-                                            <DeleteCompetitor
-                                                competitor={competitor}
-                                            />
-                                        }
-                                    >
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                        >
-                                            Save changes
-                                        </Button>
-                                    </FormActions>
-                                </>
-                            )}
-                        </Form>
-                    </CardContent>
-                </Card>
+                                <FormActions
+                                    aside={
+                                        <DeleteCompetitor
+                                            competitor={competitor}
+                                        />
+                                    }
+                                >
+                                    <Button type="submit" disabled={processing}>
+                                        Save changes
+                                    </Button>
+                                </FormActions>
+                            </>
+                        )}
+                    </Form>
+                </section>
             </Page>
         </>
     );

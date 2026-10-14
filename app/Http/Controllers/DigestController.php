@@ -9,6 +9,7 @@ use App\Jobs\RunDigest;
 use App\Models\Business;
 use App\Models\Digest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,17 +21,21 @@ class DigestController extends Controller
     private const HISTORY = 30;
 
     /**
-     * Every digest written about a company, newest first.
+     * Every digest written about a company, newest first — the first thing
+     * seen after signing in.
      */
-    public function index(Business $business): Response
+    public function index(Request $request, Business $business): Response
     {
         $this->authorize('view', $business);
 
         return Inertia::render('digests/index', [
-            'business' => BusinessResource::make($business),
-            'digests' => DigestResource::collection(
+            'business' => BusinessResource::make($business->loadMissing('apiKey')),
+            'digests' => fn () => DigestResource::collection(
                 $business->digests()->reorder()->latest('id')->limit(self::HISTORY)->get()
             ),
+            'competitors' => fn () => CompetitorResource::collection($business->competitors()->get()),
+            'isDigesting' => fn (): bool => $business->digests()->inFlight()->exists(),
+            'hasApiKeys' => fn (): bool => $request->user()->apiKeys()->exists(),
         ]);
     }
 

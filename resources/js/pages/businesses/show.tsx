@@ -1,16 +1,9 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, Head } from '@inertiajs/react';
 import { ExternalLink } from 'lucide-react';
 import BusinessController from '@/actions/App/Http/Controllers/BusinessController';
 import { BusinessFields } from '@/components/business/business-fields';
 import { FormActions, Page, SectionHeading } from '@/components/ds';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     Dialog,
     DialogClose,
@@ -21,7 +14,6 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { formatDateTime, hostOf } from '@/lib/format';
-import { index, show } from '@/routes/businesses';
 import type { Business, SelectOption } from '@/types';
 
 export default function ShowBusiness({
@@ -33,13 +25,6 @@ export default function ShowBusiness({
     frequencies: SelectOption[];
     apiKeys: SelectOption[];
 }) {
-    setLayoutProps({
-        breadcrumbs: [
-            { title: 'Companies', href: index() },
-            { title: business.name, href: show(business.id) },
-        ],
-    });
-
     return (
         <>
             <Head title={business.name} />
@@ -63,49 +48,44 @@ export default function ShowBusiness({
                     }
                 />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>About this company</CardTitle>
-                        <CardDescription>
+                <section className="space-y-5 border-t border-rule pt-6">
+                    <div className="space-y-1">
+                        <h2 className="label-micro text-ink">
+                            About this company
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
                             Competitors are found and written up against this
                             description. Changing the cadence moves the next
                             digest.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Form
-                            {...BusinessController.update.form(business.id)}
-                            options={{ preserveScroll: true }}
-                            className="max-w-xl space-y-5"
-                        >
-                            {({ processing, errors }) => (
-                                <>
-                                    <BusinessFields
-                                        business={business}
-                                        frequencies={frequencies}
-                                        apiKeys={apiKeys}
-                                        errors={errors}
-                                    />
+                        </p>
+                    </div>
+                    <Form
+                        {...BusinessController.update.form(business.id)}
+                        options={{ preserveScroll: true }}
+                        className="max-w-xl space-y-5"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                <BusinessFields
+                                    business={business}
+                                    frequencies={frequencies}
+                                    apiKeys={apiKeys}
+                                    errors={errors}
+                                />
 
-                                    <FormActions
-                                        aside={
-                                            <DeleteBusiness
-                                                business={business}
-                                            />
-                                        }
-                                    >
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                        >
-                                            Save changes
-                                        </Button>
-                                    </FormActions>
-                                </>
-                            )}
-                        </Form>
-                    </CardContent>
-                </Card>
+                                <FormActions
+                                    aside={
+                                        <DeleteBusiness business={business} />
+                                    }
+                                >
+                                    <Button type="submit" disabled={processing}>
+                                        Save changes
+                                    </Button>
+                                </FormActions>
+                            </>
+                        )}
+                    </Form>
+                </section>
             </Page>
         </>
     );

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Queue;
 
 it('shares no businesses with an account that has none', function () {
     $this->actingAs(User::factory()->create())
-        ->get(route('dashboard'))
+        ->get(route('profile.edit'))
         ->assertInertia(fn ($page) => $page
             ->where('businessChooser.current', null)
             ->where('businessChooser.all', [])
@@ -21,7 +21,7 @@ it('falls back to the first business when none has been picked', function () {
     Business::factory()->create();
 
     $this->actingAs($user)
-        ->get(route('dashboard'))
+        ->get(route('profile.edit'))
         ->assertInertia(fn ($page) => $page
             ->where('businessChooser.current', ['id' => $first->id, 'name' => 'Northwind Coffee'])
             ->has('businessChooser.all', 2)
@@ -35,12 +35,12 @@ it('switches business and goes to it', function () {
 
     $this->actingAs($user)
         ->put(route('current-business.update'), ['business_id' => $second->id])
-        ->assertRedirect(route('businesses.show', $second));
+        ->assertRedirect(route('businesses.digests.index', $second));
 
     expect($user->fresh()->current_business_id)->toBe($second->id);
 
     $this->actingAs($user)
-        ->get(route('dashboard'))
+        ->get(route('profile.edit'))
         ->assertInertia(fn ($page) => $page->where('businessChooser.current.id', $second->id));
 });
 

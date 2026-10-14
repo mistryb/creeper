@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCompetitorRequest;
 use App\Http\Requests\UpdateCompetitorRequest;
 use App\Http\Resources\BusinessResource;
+use App\Http\Resources\CompetitorDiscoveryResource;
 use App\Http\Resources\CompetitorResource;
 use App\Models\Business;
 use App\Models\Competitor;
@@ -15,7 +16,7 @@ use Inertia\Response;
 class CompetitorController extends Controller
 {
     /**
-     * The companies a business competes with.
+     * The companies a business competes with, and Creeper's search for more.
      */
     public function index(Business $business): Response
     {
@@ -23,7 +24,11 @@ class CompetitorController extends Controller
 
         return Inertia::render('competitors/index', [
             'business' => BusinessResource::make($business),
-            'competitors' => CompetitorResource::collection($business->competitors()->get()),
+            'competitors' => fn () => CompetitorResource::collection($business->competitors()->get()),
+            'latestDiscovery' => fn (): ?CompetitorDiscoveryResource => ($discovery = $business->discoveries()->reorder()->latest('id')->first()) === null
+                ? null
+                : CompetitorDiscoveryResource::make($discovery),
+            'isDiscovering' => fn (): bool => $business->discoveries()->inFlight()->exists(),
         ]);
     }
 
@@ -50,7 +55,7 @@ class CompetitorController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Competitor added.')]);
 
-        return to_route('dashboard');
+        return to_route('businesses.competitors.index', $business);
     }
 
     /**

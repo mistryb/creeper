@@ -2,6 +2,7 @@
 
 use App\Models\Business;
 use App\Models\Competitor;
+use App\Models\CompetitorDiscovery;
 use App\Models\Digest;
 use App\Models\User;
 
@@ -24,6 +25,25 @@ it('lists a company\'s competitors, saying which ones Creeper found', function (
         );
 });
 
+it('says whether Creeper is looking for more, and why the last look failed', function () {
+    $business = Business::factory()->create();
+    $failed = CompetitorDiscovery::factory()->for($business)->failed()->create();
+
+    $this->actingAs($business->user)
+        ->get(route('businesses.competitors.index', $business))
+        ->assertInertia(fn ($page) => $page
+            ->where('latestDiscovery.data.id', $failed->id)
+            ->where('latestDiscovery.data.status', 'failed')
+            ->where('isDiscovering', false)
+        );
+
+    CompetitorDiscovery::factory()->for($business)->queued()->create();
+
+    $this->actingAs($business->user)
+        ->get(route('businesses.competitors.index', $business))
+        ->assertInertia(fn ($page) => $page->where('isDiscovering', true));
+});
+
 it('adds a competitor to a company', function () {
     $business = Business::factory()->create();
 
@@ -34,7 +54,7 @@ it('adds a competitor to a company', function () {
             'description' => 'The big national roaster.',
         ])
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('dashboard'));
+        ->assertRedirect(route('businesses.competitors.index', $business));
 
     $competitor = $business->competitors()->sole();
 

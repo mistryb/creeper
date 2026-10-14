@@ -12,7 +12,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatRelative, hostOf } from '@/lib/format';
-import { create, index, show } from '@/routes/businesses';
+import { create, show } from '@/routes/businesses';
 import type { Business, ResourceCollection } from '@/types';
 
 export default function BusinessesIndex({
@@ -99,7 +99,3 @@ export default function BusinessesIndex({
         </>
     );
 }
-
-BusinessesIndex.layout = {
-    breadcrumbs: [{ title: 'Companies', href: index() }],
-};

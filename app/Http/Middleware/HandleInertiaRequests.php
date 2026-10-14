@@ -43,7 +43,6 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'businessChooser' => fn (): array => $this->businessChooser($request),
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
 
@@ -66,7 +65,7 @@ class HandleInertiaRequests extends Middleware
 
         return [
             'current' => $current?->only(['id', 'name']),
-            'all' => $all->map(fn (Business $business): array => $business->only(['id', 'name']))->values()->all(),
+            'all' => array_values($all->map(fn (Business $business): array => $business->only(['id', 'name']))->all()),
         ];
     }
 }

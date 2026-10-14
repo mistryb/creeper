@@ -3,7 +3,6 @@ import BusinessController from '@/actions/App/Http/Controllers/BusinessControlle
 import { BusinessFields } from '@/components/business/business-fields';
 import { FormActions, Page, SectionHeading } from '@/components/ds';
 import { Button } from '@/components/ui/button';
-import { create, index } from '@/routes/businesses';
 import type { SelectOption } from '@/types';
 
 export default function CreateBusiness({
@@ -55,10 +54,3 @@ export default function CreateBusiness({
         </>
     );
 }
-
-CreateBusiness.layout = {
-    breadcrumbs: [
-        { title: 'Companies', href: index() },
-        { title: 'New company', href: create() },
-    ],
-};

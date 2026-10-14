@@ -60,7 +60,11 @@ export function formatDateTime(date: string | null | undefined): string {
         return '—';
     }
 
-    return new Intl.DateTimeFormat(undefined, {
+    // A fixed locale, not the runtime's: the server renders this page first
+    // and the browser then hydrates it, and two runtimes with different
+    // default locales ("9:28 a.m." against "9:28 AM") disagree and make
+    // React throw the server's markup away.
+    return new Intl.DateTimeFormat('en-US', {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(new Date(date));

@@ -251,6 +251,24 @@ describe('the screens', function () {
             );
     });
 
+    it('gives the digest list what it needs to name competitors and show a run in progress', function () {
+        $business = Business::factory()->withKey()->create();
+        $competitor = Competitor::factory()->for($business)->create();
+        Digest::factory()->for($business)->create(['report' => DigestFactory::report([$competitor])]);
+        Digest::factory()->for($business)->queued()->create();
+
+        $this->actingAs($business->user)
+            ->get(route('businesses.digests.index', $business))
+            ->assertInertia(fn ($page) => $page
+                ->component('digests/index')
+                ->where('business.data.api_key_label', $business->apiKey->label())
+                ->has('competitors.data', 1)
+                ->where('competitors.data.0.subject', $competitor->subject())
+                ->where('isDigesting', true)
+                ->where('hasApiKeys', true)
+            );
+    });
+
     it('shows one digest with the competitors it names', function () {
         $business = Business::factory()->create();
         $competitor = Competitor::factory()->for($business)->create();

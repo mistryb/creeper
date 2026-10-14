@@ -1,14 +1,15 @@
-import { Head, setLayoutProps } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { DigestReportView } from '@/components/digest/digest-report';
 import { RunStatusBadge } from '@/components/digest/status-badge';
-import { Page, ReceiptRow, SectionHeading } from '@/components/ds';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Page } from '@/components/ds';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import { index } from '@/routes/businesses/digests';
-import { show } from '@/routes/digests';
 import type { Business, Competitor, Digest, ResourceCollection } from '@/types';
 
+/**
+ * One digest, to be read top to bottom: when it covers, what it says, and a
+ * quiet line about how it was written.
+ */
 export default function ShowDigest({
     business: { data: business },
     digest: { data: digest },
@@ -18,96 +19,56 @@ export default function ShowDigest({
     digest: { data: Digest };
     competitors: ResourceCollection<Competitor>;
 }) {
-    const title = `${formatDateTime(digest.period_start)} to ${formatDateTime(digest.period_end)}`;
-
-    setLayoutProps({
-        breadcrumbs: [
-            { title: 'Digests', href: index(business.id) },
-            { title, href: show(digest.id) },
-        ],
-    });
+    const period = `${formatDateTime(digest.period_start)} to ${formatDateTime(digest.period_end)}`;
 
     return (
         <>
-            <Head title={`Digest · ${title}`} />
+            <Head title={`Digest · ${period}`} />
 
             <Page>
-                <SectionHeading
-                    title="Competitor digest"
-                    note={title}
-                    description={
+                <div className="space-y-2 text-center">
+                    <p className="label-micro text-muted-foreground">
+                        <Link
+                            href={index(business.id)}
+                            className="hover:text-ink"
+                        >
+                            ← Digests
+                        </Link>
+                    </p>
+                    <p className="label-micro text-muted-foreground">
+                        {period}
+                    </p>
+                    {digest.status !== 'succeeded' && (
                         <RunStatusBadge
                             status={digest.status}
                             label={digest.status_label}
                         />
-                    }
-                />
-
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-                    <div>
-                        {digest.report ? (
-                            <DigestReportView
-                                report={digest.report}
-                                competitors={competitors.data}
-                            />
-                        ) : digest.error ? (
-                            <Alert variant="destructive">
-                                <AlertTitle>
-                                    This digest was not written
-                                </AlertTitle>
-                                <AlertDescription>
-                                    {digest.error}
-                                </AlertDescription>
-                            </Alert>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">
-                                Still being written.
-                            </p>
-                        )}
-                    </div>
-
-                    <Card className="self-start">
-                        <CardHeader>
-                            <CardTitle>About this digest</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <dl className="divide-y divide-rule">
-                                <ReceiptRow
-                                    labelAs="dt"
-                                    valueAs="dd"
-                                    label="Company"
-                                    value={business.name}
-                                />
-                                <ReceiptRow
-                                    labelAs="dt"
-                                    valueAs="dd"
-                                    label="Sent"
-                                    value={formatRelative(digest.sent_at)}
-                                />
-                                <ReceiptRow
-                                    labelAs="dt"
-                                    valueAs="dd"
-                                    label="Written by"
-                                    value={
-                                        digest.provider
-                                            ? `${digest.provider}${digest.model ? ` · ${digest.model}` : ''}`
-                                            : '—'
-                                    }
-                                />
-                                <ReceiptRow
-                                    labelAs="dt"
-                                    valueAs="dd"
-                                    label="Tokens"
-                                    value={
-                                        digest.prompt_tokens !== null
-                                            ? `${digest.prompt_tokens.toLocaleString()} in · ${(digest.completion_tokens ?? 0).toLocaleString()} out`
-                                            : '—'
-                                    }
-                                />
-                            </dl>
-                        </CardContent>
-                    </Card>
+                    )}
                 </div>
+
+                {digest.report ? (
+                    <DigestReportView
+                        report={digest.report}
+                        competitors={competitors.data}
+                    />
+                ) : (
+                    <p className="text-center text-sm text-muted-foreground">
+                        {digest.error ?? 'Still being written.'}
+                    </p>
+                )}
+
+                <p className="border-t border-rule pt-4 text-center font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
+                    {[
+                        digest.sent_at &&
+                            `Sent ${formatRelative(digest.sent_at)}`,
+                        digest.provider &&
+                            `written by ${digest.provider}${digest.model ? ` · ${digest.model}` : ''}`,
+                        digest.prompt_tokens !== null &&
+                            `${(digest.prompt_tokens + (digest.completion_tokens ?? 0)).toLocaleString()} tokens`,
+                    ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                </p>
             </Page>
         </>
     );

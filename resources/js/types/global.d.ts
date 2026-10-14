@@ -14,7 +14,6 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             businessChooser: BusinessChoices;
-            sidebarOpen: boolean;
             [key: string]: unknown;
         };
     }

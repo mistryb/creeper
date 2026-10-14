@@ -1,9 +1,8 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, Head } from '@inertiajs/react';
 import CompetitorController from '@/actions/App/Http/Controllers/CompetitorController';
 import { CompetitorFields } from '@/components/competitor/competitor-fields';
 import { FormActions, Page, SectionHeading } from '@/components/ds';
 import { Button } from '@/components/ui/button';
-import { create, index } from '@/routes/businesses/competitors';
 import type { Business } from '@/types';
 
 export default function CreateCompetitor({
@@ -11,13 +10,6 @@ export default function CreateCompetitor({
 }: {
     business: { data: Business };
 }) {
-    setLayoutProps({
-        breadcrumbs: [
-            { title: 'Competitors', href: index(business.id) },
-            { title: 'New competitor', href: create(business.id) },
-        ],
-    });
-
     return (
         <>
             <Head title="New competitor" />
