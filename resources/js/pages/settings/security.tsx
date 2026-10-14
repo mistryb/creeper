@@ -4,7 +4,6 @@ import SecurityController from '@/actions/App/Http/Controllers/Settings/Security
 import { EmptyState, FormActions, SectionHeading } from '@/components/ds';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { edit } from '@/routes/security';
 
 type Props = {
     otherSessions: number;
@@ -86,12 +85,3 @@ export default function Security({ otherSessions }: Props) {
         </>
     );
 }
-
-Security.layout = {
-    breadcrumbs: [
-        {
-            title: 'Security settings',
-            href: edit(),
-        },
-    ],
-};

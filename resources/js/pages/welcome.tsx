@@ -26,7 +26,7 @@ import { deploy } from '@/routes';
  * typed character by character; the results land whole, the way a real run
  * reports back.
  */
-const COMMAND = '> creep rival.example.com/pricing --daily';
+const COMMAND = '> creeper digest acme.example.com --every-morning';
 
 type OutputLine = {
     key: string;
@@ -37,50 +37,48 @@ type OutputLine = {
 
 const OUTPUT_LINES: OutputLine[] = [
     {
-        key: 'read',
+        key: 'find',
         delay: 500,
         node: (
             <>
-                {'  reading page '}
-                <Ok>................ ok</Ok>
+                {'  finding competitors '}
+                <Ok>......... 6 found</Ok>
             </>
         ),
     },
     {
-        key: 'ask',
+        key: 'search',
         delay: 660,
         node: (
             <>
-                {'  asking claude '}
-                <Ok>............... ok</Ok>
+                {'  searching the web '}
+                <Ok>........... 12 searches</Ok>
             </>
         ),
     },
     {
-        key: 'price',
+        key: 'rival',
         delay: 440,
         node: (
             <>
-                <Changed>~ pro plan</Changed>
-                {'     '}
-                <Emitted>$49/mo</Emitted>
-                {' → '}
+                <Changed>~ rival.example.com</Changed>
+                {'  cut '}
+                <Emitted>pro</Emitted>
+                {' to '}
                 <Emitted>$39/mo</Emitted>
-                {'   '}
-                <Changed>down 20%</Changed>
+                {', 2 sources'}
             </>
         ),
     },
     {
-        key: 'release',
+        key: 'other',
         delay: 440,
         node: (
             <>
-                <Changed>+ changelog</Changed>
-                {'    '}
-                <Emitted>v4.2</Emitted>
-                {' shipped '}
-                <Emitted>SSO for every plan</Emitted>
+                <Changed>+ other.example.com</Changed>
+                {'  raised a '}
+                <Emitted>series B</Emitted>
+                {', hiring in sales'}
             </>
         ),
     },
@@ -89,8 +87,8 @@ const OUTPUT_LINES: OutputLine[] = [
         delay: 0,
         node: (
             <>
-                <Ok>2 changes logged.</Ok>
-                {' next visit in 24h.'}
+                <Ok>digest sent.</Ok>
+                {' next one tomorrow morning.'}
             </>
         ),
     },
@@ -209,7 +207,7 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="Keep tabs on your competitors" />
+            <Head title="A competitor digest in your inbox" />
 
             <MarketingLayout
                 nav={
@@ -227,12 +225,12 @@ export default function Welcome() {
                     <Panel>
                         <PanelBar
                             title="creeper"
-                            meta="watching 1 competitor"
+                            meta="6 competitors · every morning"
                         />
 
                         <div className="p-6 sm:p-12">
                             <Eyebrow className="mb-5 flex flex-wrap items-center gap-2.5">
-                                <span>Competitor watcher</span>
+                                <span>Competitor digest</span>
                                 <span className="text-rule">/</span>
                                 <span>Bring your own API key</span>
                             </Eyebrow>
@@ -242,21 +240,21 @@ export default function Welcome() {
                                 size="hero"
                                 className="mb-5 text-balance"
                             >
-                                Keep tabs on
+                                Know what your rivals
                                 <br />
                                 <span className="text-ribbon">
-                                    the competition.
+                                    did this week.
                                 </span>
                             </Display>
 
                             <p className="mb-8 max-w-[40rem] text-[1.0625rem] text-ink-soft">
-                                Your rivals change their prices, ship features
-                                and rewrite their plans without telling you. You
-                                find out from a customer, weeks later.{' '}
+                                Your competitors launch, reprice, raise money
+                                and hire without telling you. You find out from
+                                a customer, weeks later.{' '}
                                 <strong className="font-medium text-ink">
-                                    Creeper reads their pages for you
+                                    Creeper researches them for you
                                 </strong>{' '}
-                                and speaks up the moment something moves.
+                                and emails you one digest, with sources.
                             </p>
 
                             <RunButtons className="mb-7" />
@@ -286,60 +284,60 @@ export default function Welcome() {
                         as="h2"
                         className="mb-5"
                         title="Set it up once"
-                        note="Three steps, then it is out of your hands"
+                        note="Three steps, then it shows up in your inbox"
                     />
 
                     <ol className="border border-ink">
                         <SetupStep
                             step="01"
-                            heading="Point it at a rival"
+                            heading="Add your company"
                             chips={
                                 <>
-                                    <Chip>rival.example.com/pricing</Chip>
-                                    <Chip>rival.example.com/changelog</Chip>
+                                    <Chip>acme.example.com</Chip>
+                                    <Chip on>every morning</Chip>
+                                    <Chip>every Monday morning</Chip>
                                 </>
                             }
                         >
-                            Their pricing page, their changelog, a product they
-                            sell next to yours — any URL that renders in a
-                            browser. Creeper does not need their API, or their
-                            permission.
+                            A name, a website and a sentence on what you sell.
+                            Pick how often you want to hear about it and which
+                            of your API keys to spend. That is the whole form.
                         </SetupStep>
 
                         <SetupStep
                             step="02"
-                            heading="Say what you care about"
+                            heading="Meet your competitors"
                             chips={
                                 <>
-                                    <Chip on>price</Chip>
-                                    <Chip on>new releases</Chip>
-                                    <Chip on>breaking changes</Chip>
-                                    <Chip>+ anything you name</Chip>
+                                    <Chip on>rival.example.com</Chip>
+                                    <Chip on>other.example.com</Chip>
+                                    <Chip>+ add your own</Chip>
                                 </>
                             }
                         >
-                            Describe it in plain words. Creeper turns that into
-                            fields it can pull on every visit, so you get a
-                            price or a release note back instead of a wall of
-                            page.
+                            Creeper reads your homepage, searches the web and
+                            comes back with a list of who you are up against.
+                            Delete the ones that do not count, add the ones it
+                            missed.
                         </SetupStep>
 
                         <SetupStep
                             step="03"
-                            heading="Then quit checking"
+                            heading="Read the digest"
                             chips={
                                 <>
-                                    <Chip>every hour</Chip>
-                                    <Chip on>every day</Chip>
-                                    <Chip>every week</Chip>
-                                    <Chip>only when I ask</Chip>
+                                    <Chip on>launches</Chip>
+                                    <Chip on>pricing</Chip>
+                                    <Chip on>funding</Chip>
+                                    <Chip on>hires</Chip>
+                                    <Chip on>campaigns</Chip>
                                 </>
                             }
                         >
-                            Pick a rhythm and walk away. Creeper keeps the
-                            history of every move they make and only interrupts
-                            you when something actually changed. Each visit
-                            counts as one check.
+                            On schedule, Creeper researches what each competitor
+                            has been doing and emails you one digest: a
+                            headline, a section per competitor, and a link for
+                            every claim. Nothing to check, nothing to log into.
                         </SetupStep>
                     </ol>
                 </section>
@@ -358,18 +356,19 @@ export default function Welcome() {
 
                             <p className="max-w-[32rem] text-paper-lit/70">
                                 Creeper is an install of your own — a box you
-                                keep, or a Laravel Cloud account — watching as
-                                many competitors as you like, as often as you
-                                like. Nothing is metered and nothing is capped.
+                                keep, or a Laravel Cloud account — covering as
+                                many companies and competitors as you like.
+                                Nothing is metered and nothing is capped.
                             </p>
                             <p className="mt-3.5 max-w-[32rem] text-paper-lit/70">
                                 The thinking runs on{' '}
                                 <strong className="font-medium text-paper-lit">
                                     your own API key
                                 </strong>{' '}
-                                — Claude, or whichever model you like. You paste
-                                it in once, you pay the model directly, and you
-                                can see exactly what each run cost you.
+                                — Anthropic, OpenAI, Gemini, Groq or OpenRouter.
+                                You paste it in once, the research and the web
+                                searches run on it, and you pay the provider
+                                directly.
                             </p>
 
                             <RunButtons className="mt-7" />

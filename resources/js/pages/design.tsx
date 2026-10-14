@@ -2,11 +2,7 @@ import { Head } from '@inertiajs/react';
 import { Bug, Plus, RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
-import { ChangeList } from '@/components/creep/change-list';
-import {
-    RunStatusBadge,
-    PageStatusBadge,
-} from '@/components/creep/status-badges';
+import { RunStatusBadge } from '@/components/digest/status-badge';
 import {
     Changed,
     CheckField,
@@ -69,7 +65,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import type { CreepChange } from '@/types';
 
 /**
  * The living style guide.
@@ -114,39 +109,6 @@ const PALETTE: { token: string; hex: string; note: string; ink?: boolean }[] = [
         token: 'ribbon-pale',
         hex: '#8fc4a8',
         note: 'Ribbon on ink · 8.3:1',
-    },
-];
-
-const CHANGES: CreepChange[] = [
-    {
-        id: 1,
-        label: 'Pro plan',
-        old_value: '$20/user/month',
-        new_value: '$25/user/month',
-        kind: 'changed',
-        kind_label: 'Changed',
-        description: 'Pro plan: $20/user/month → $25/user/month',
-        detected_at: '2026-08-20T09:14:00Z',
-    },
-    {
-        id: 2,
-        label: 'Latest release',
-        old_value: null,
-        new_value: 'v4.2.0',
-        kind: 'added',
-        kind_label: 'New',
-        description: 'New: Latest release — v4.2.0',
-        detected_at: '2026-08-19T17:02:00Z',
-    },
-    {
-        id: 3,
-        label: 'Free tier',
-        old_value: '10k events/month',
-        new_value: null,
-        kind: 'removed',
-        kind_label: 'Gone',
-        description: 'Gone: Free tier (was 10k events/month)',
-        detected_at: '2026-08-18T11:40:00Z',
     },
 ];
 
@@ -509,10 +471,9 @@ export default function DesignSystem() {
                         </Spec>
 
                         <Spec label="The app's status badges">
-                            <PageStatusBadge status="active" label="Active" />
-                            <PageStatusBadge status="paused" label="Paused" />
-                            <PageStatusBadge status="failed" label="Parked" />
+                            <RunStatusBadge status="queued" label="Queued" />
                             <RunStatusBadge status="running" label="Running" />
+                            <RunStatusBadge status="failed" label="Failed" />
                             <RunStatusBadge
                                 status="succeeded"
                                 label="Succeeded"
@@ -575,9 +536,9 @@ export default function DesignSystem() {
                                             {latest}
                                         </TableCell>
                                         <TableCell>
-                                            <PageStatusBadge
-                                                status="active"
-                                                label="Active"
+                                            <RunStatusBadge
+                                                status="succeeded"
+                                                label="Sent"
                                             />
                                         </TableCell>
                                     </TableRow>
@@ -660,19 +621,6 @@ export default function DesignSystem() {
                                 </CardContent>
                             </Card>
                         </div>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Change list</CardTitle>
-                                <CardDescription>
-                                    Direction gets an arrow and a label as well
-                                    as a colour.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ChangeList changes={CHANGES} />
-                            </CardContent>
-                        </Card>
 
                         <Spec label="Skeleton" className="block">
                             <div className="w-full space-y-2">

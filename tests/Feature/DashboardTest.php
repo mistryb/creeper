@@ -1,27 +1,34 @@
 <?php
 
-namespace Tests\Feature;
-
+use App\Models\Business;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class DashboardTest extends TestCase
-{
-    use RefreshDatabase;
+it('sends guests to log in', function () {
+    $this->get(route('dashboard'))->assertRedirect(route('login'));
+});
 
-    public function test_guests_are_redirected_to_the_login_page()
-    {
-        $response = $this->get(route('dashboard'));
-        $response->assertRedirect(route('login'));
-    }
+it('shows an account with no company the way in', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('dashboard'));
+});
 
-    public function test_authenticated_users_can_visit_the_dashboard()
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+it('sends an account with a company straight to its digests', function () {
+    $business = Business::factory()->create();
 
-        $response = $this->get(route('dashboard'));
-        $response->assertOk();
-    }
-}
+    $this->actingAs($business->user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('businesses.digests.index', $business));
+});
+
+it('sends you to the digests of the company picked in the header', function () {
+    $user = User::factory()->create();
+    Business::factory()->for($user)->create();
+    $picked = Business::factory()->for($user)->create();
+    $user->switchBusiness($picked);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('businesses.digests.index', $picked));
+});

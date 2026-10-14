@@ -3,17 +3,23 @@ import BusinessController from '@/actions/App/Http/Controllers/BusinessControlle
 import { BusinessFields } from '@/components/business/business-fields';
 import { FormActions, Page, SectionHeading } from '@/components/ds';
 import { Button } from '@/components/ui/button';
-import { create, index } from '@/routes/businesses';
+import type { SelectOption } from '@/types';
 
-export default function CreateBusiness() {
+export default function CreateBusiness({
+    frequencies,
+    apiKeys,
+}: {
+    frequencies: SelectOption[];
+    apiKeys: SelectOption[];
+}) {
     return (
         <>
-            <Head title="New business" />
+            <Head title="New company" />
 
             <Page>
                 <SectionHeading
-                    title="New business"
-                    note="Tell Creeper who you are before it watches who you're up against"
+                    title="New company"
+                    note="Tell Creeper who you are. It finds who you're up against."
                 />
 
                 <Form
@@ -22,13 +28,23 @@ export default function CreateBusiness() {
                 >
                     {({ processing, errors }) => (
                         <>
-                            <BusinessFields errors={errors} autoFocus />
+                            <BusinessFields
+                                frequencies={frequencies}
+                                apiKeys={apiKeys}
+                                errors={errors}
+                                autoFocus
+                            />
 
                             <FormActions>
-                                <Button type="submit" disabled={processing}>
+                                <Button
+                                    type="submit"
+                                    disabled={
+                                        processing || apiKeys.length === 0
+                                    }
+                                >
                                     {processing
                                         ? 'Setting up…'
-                                        : 'Set up business'}
+                                        : 'Set up and find competitors'}
                                 </Button>
                             </FormActions>
                         </>
@@ -38,10 +54,3 @@ export default function CreateBusiness() {
         </>
     );
 }
-
-CreateBusiness.layout = {
-    breadcrumbs: [
-        { title: 'Businesses', href: index() },
-        { title: 'New business', href: create() },
-    ],
-};

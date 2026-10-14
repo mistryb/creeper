@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 class CurrentBusinessController extends Controller
 {
     /**
-     * Switch the business the app is working on, and go to it.
+     * Switch the business the app is working on, and go to its digests.
      */
     public function update(Request $request): RedirectResponse
     {
@@ -22,10 +22,10 @@ class CurrentBusinessController extends Controller
             ],
         ]);
 
-        $business = Business::query()->findOrFail($validated['business_id']);
+        $business = Business::query()->whereKey($validated['business_id'])->firstOrFail();
 
         $request->user()->switchBusiness($business);
 
-        return to_route('businesses.show', $business);
+        return to_route('businesses.digests.index', $business);
     }
 }

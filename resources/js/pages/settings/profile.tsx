@@ -12,7 +12,6 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from '@/components/ui/input-otp';
-import { edit } from '@/routes/profile';
 import type { Auth } from '@/types';
 
 const CODE_LENGTH = 6;
@@ -194,12 +193,3 @@ function ConfirmEmailChange({
         </div>
     );
 }
-
-Profile.layout = {
-    breadcrumbs: [
-        {
-            title: 'Profile settings',
-            href: edit(),
-        },
-    ],
-};

@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCompetitorRequest;
 use App\Http\Requests\UpdateCompetitorRequest;
 use App\Http\Resources\BusinessResource;
+use App\Http\Resources\CompetitorDiscoveryResource;
 use App\Http\Resources\CompetitorResource;
-use App\Http\Resources\WatchedPageResource;
 use App\Models\Business;
 use App\Models\Competitor;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +16,7 @@ use Inertia\Response;
 class CompetitorController extends Controller
 {
     /**
-     * The companies a business competes with.
+     * The companies a business competes with, and Creeper's search for more.
      */
     public function index(Business $business): Response
     {
@@ -24,9 +24,11 @@ class CompetitorController extends Controller
 
         return Inertia::render('competitors/index', [
             'business' => BusinessResource::make($business),
-            'competitors' => CompetitorResource::collection(
-                $business->competitors()->withCount('watchedPages')->get()
-            ),
+            'competitors' => fn () => CompetitorResource::collection($business->competitors()->get()),
+            'latestDiscovery' => fn (): ?CompetitorDiscoveryResource => ($discovery = $business->discoveries()->reorder()->latest('id')->first()) === null
+                ? null
+                : CompetitorDiscoveryResource::make($discovery),
+            'isDiscovering' => fn (): bool => $business->discoveries()->inFlight()->exists(),
         ]);
     }
 
@@ -49,15 +51,15 @@ class CompetitorController extends Controller
     {
         $this->authorize('update', $business);
 
-        $competitor = $business->competitors()->create($request->validated());
+        $business->competitors()->create($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Competitor added.')]);
 
-        return to_route('competitors.show', $competitor);
+        return to_route('businesses.competitors.index', $business);
     }
 
     /**
-     * One competitor: who they are, and the pages of theirs being watched.
+     * One competitor: who they are, and the form for changing it.
      */
     public function show(Competitor $competitor): Response
     {
@@ -66,12 +68,6 @@ class CompetitorController extends Controller
         return Inertia::render('competitors/show', [
             'business' => BusinessResource::make($competitor->business),
             'competitor' => CompetitorResource::make($competitor),
-            'watchedPages' => WatchedPageResource::collection(
-                $competitor->watchedPages()
-                    ->with(['latestSnapshot', 'latestRun'])
-                    ->latest()
-                    ->get()
-            ),
         ]);
     }
 
@@ -90,7 +86,7 @@ class CompetitorController extends Controller
     }
 
     /**
-     * Stop watching a competitor, and forget everything found about them.
+     * Drop a competitor from the digest.
      */
     public function destroy(Competitor $competitor): RedirectResponse
     {

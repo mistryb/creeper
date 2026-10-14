@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Creeping\Contracts\CreepDriver;
-use App\Creeping\CreepManager;
 use App\Models\Business;
 use App\Models\Competitor;
 use Carbon\CarbonImmutable;
@@ -34,15 +32,6 @@ class AppServiceProvider extends ServiceProvider
          * owned by App\Http\Controllers\Auth. See routes/auth.php.
          */
         Fortify::ignoreRoutes();
-
-        $this->app->singleton(CreepManager::class);
-
-        // Anything that needs to creep asks for the contract and gets
-        // whichever driver `creeping.driver` names.
-        $this->app->bind(
-            CreepDriver::class,
-            fn ($app): CreepDriver => $app->make(CreepManager::class)->driver(),
-        );
     }
 
     /**
@@ -154,7 +143,7 @@ class AppServiceProvider extends ServiceProvider
         );
 
         // Polymorphic rows store these names, not class names, so a class can
-        // be renamed without rewriting every analysis that points at it.
+        // be renamed without rewriting any row that points at it.
         Relation::morphMap([
             'business' => Business::class,
             'competitor' => Competitor::class,

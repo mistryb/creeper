@@ -14,6 +14,10 @@ const navItems: NavItem[] = [
     { title: 'API keys', href: apiKeys(), icon: null },
 ];
 
+/**
+ * Settings, in the same single column as everything else: a heading, a row of
+ * tabs, and the form.
+ */
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
 
@@ -21,43 +25,32 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         <Page>
             <SectionHeading title="Settings" note="Your account, your keys" />
 
-            <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
-                {/*
-                 * Filing tabs down the side: the current one is inked green and
-                 * carries a rule on its leading edge, so the active row is
-                 * marked by position as well as by colour.
-                 */}
-                <nav
-                    className="flex shrink-0 overflow-x-auto border-b border-rule lg:w-44 lg:flex-col lg:border-b-0 lg:border-l lg:border-rule"
-                    aria-label="Settings"
-                >
-                    {navItems.map((item, index) => {
-                        const current = isCurrentOrParentUrl(item.href);
+            <nav
+                className="flex gap-5 border-b border-rule label-micro"
+                aria-label="Settings"
+            >
+                {navItems.map((item, index) => {
+                    const current = isCurrentOrParentUrl(item.href);
 
-                        return (
-                            <Link
-                                key={`${toUrl(item.href)}-${index}`}
-                                href={item.href}
-                                aria-current={current ? 'page' : undefined}
-                                className={cn(
-                                    'border-b-2 px-3.5 py-2.5 label-micro whitespace-nowrap transition-colors lg:-ml-px lg:border-b-0 lg:border-l-2',
-                                    current
-                                        ? 'border-ribbon bg-greenbar/60 text-ribbon'
-                                        : 'border-transparent text-muted-foreground hover:bg-greenbar/40 hover:text-foreground',
-                                )}
-                            >
-                                {item.title}
-                            </Link>
-                        );
-                    })}
-                </nav>
+                    return (
+                        <Link
+                            key={`${toUrl(item.href)}-${index}`}
+                            href={item.href}
+                            aria-current={current ? 'page' : undefined}
+                            className={cn(
+                                '-mb-px border-b-2 pb-2.5 whitespace-nowrap transition-colors',
+                                current
+                                    ? 'border-ribbon text-ribbon'
+                                    : 'border-transparent text-muted-foreground hover:text-ink',
+                            )}
+                        >
+                            {item.title}
+                        </Link>
+                    );
+                })}
+            </nav>
 
-                <div className="min-w-0 flex-1">
-                    <section className="max-w-xl space-y-10">
-                        {children}
-                    </section>
-                </div>
-            </div>
+            <section className="space-y-10">{children}</section>
         </Page>
     );
 }
