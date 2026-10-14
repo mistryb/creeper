@@ -5,6 +5,8 @@ import { Page } from '@/components/ds';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatRelative, hostOf } from '@/lib/format';
+import { index as apiKeysIndex } from '@/routes/api-keys';
+import { show as showBusiness } from '@/routes/businesses';
 import { create } from '@/routes/businesses/competitors';
 import { show } from '@/routes/competitors';
 import type {
@@ -19,6 +21,7 @@ type Props = {
     competitors: ResourceCollection<Competitor>;
     latestDiscovery: { data: CompetitorDiscovery } | null;
     isDiscovering: boolean;
+    hasApiKeys: boolean;
 };
 
 /**
@@ -29,6 +32,7 @@ export default function CompetitorsIndex({
     competitors,
     latestDiscovery,
     isDiscovering,
+    hasApiKeys,
 }: Props) {
     // Looking takes a minute or two; check back while it is.
     const { start, stop } = usePoll(
@@ -47,6 +51,7 @@ export default function CompetitorsIndex({
         return stop;
     }, [isDiscovering, start, stop]);
 
+    const keyless = business.api_key_id === null;
     const count = competitors.data.length;
     const failed =
         latestDiscovery?.data.status === 'failed' ? latestDiscovery.data : null;
@@ -77,7 +82,7 @@ export default function CompetitorsIndex({
                                     disabled={
                                         processing ||
                                         isDiscovering ||
-                                        business.api_key_id === null
+                                        keyless
                                     }
                                 >
                                     {isDiscovering
@@ -93,6 +98,23 @@ export default function CompetitorsIndex({
                         </Button>
                     </div>
                 </div>
+
+                {keyless && (
+                    <p className="text-center text-sm text-ribbon-red">
+                        No API key to look with.{' '}
+                        <Link
+                            href={
+                                hasApiKeys
+                                    ? showBusiness(business.id)
+                                    : apiKeysIndex()
+                            }
+                            className="underline underline-offset-4"
+                        >
+                            {hasApiKeys ? 'Pick one' : 'Add one'}
+                        </Link>
+                        .
+                    </p>
+                )}
 
                 {failed && (
                     <p className="text-center text-sm text-ribbon-red">

@@ -10,6 +10,7 @@ use App\Http\Resources\CompetitorResource;
 use App\Models\Business;
 use App\Models\Competitor;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,7 +19,7 @@ class CompetitorController extends Controller
     /**
      * The companies a business competes with, and Creeper's search for more.
      */
-    public function index(Business $business): Response
+    public function index(Request $request, Business $business): Response
     {
         $this->authorize('view', $business);
 
@@ -29,6 +30,7 @@ class CompetitorController extends Controller
                 ? null
                 : CompetitorDiscoveryResource::make($discovery),
             'isDiscovering' => fn (): bool => $business->discoveries()->inFlight()->exists(),
+            'hasApiKeys' => fn (): bool => $request->user()->apiKeys()->exists(),
         ]);
     }
 

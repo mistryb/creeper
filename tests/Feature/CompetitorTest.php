@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ApiKey;
 use App\Models\Business;
 use App\Models\Competitor;
 use App\Models\CompetitorDiscovery;
@@ -42,6 +43,23 @@ it('says whether Creeper is looking for more, and why the last look failed', fun
     $this->actingAs($business->user)
         ->get(route('businesses.competitors.index', $business))
         ->assertInertia(fn ($page) => $page->where('isDiscovering', true));
+});
+
+it('says whether there is another key to pick once the company has lost its own', function () {
+    $business = Business::factory()->create(['api_key_id' => null]);
+
+    $this->actingAs($business->user)
+        ->get(route('businesses.competitors.index', $business))
+        ->assertInertia(fn ($page) => $page
+            ->where('business.data.api_key_id', null)
+            ->where('hasApiKeys', false)
+        );
+
+    ApiKey::factory()->for($business->user)->create();
+
+    $this->actingAs($business->user)
+        ->get(route('businesses.competitors.index', $business))
+        ->assertInertia(fn ($page) => $page->where('hasApiKeys', true));
 });
 
 it('adds a competitor to a company', function () {
