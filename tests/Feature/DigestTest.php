@@ -221,7 +221,7 @@ describe('the email', function () {
         $digest = Digest::factory()->for($business)->create(['report' => DigestFactory::report([$acme, $gone])]);
         $gone->delete();
 
-        $rendered = (new DigestReady($digest))->toMail($business->user)->render()->toHtml();
+        $rendered = (string) (new DigestReady($digest))->toMail($business->user)->render();
 
         expect($rendered)->toContain('Prices went up across the board this week.')
             ->toContain('Acme Insights')
@@ -229,6 +229,28 @@ describe('the email', function () {
             ->toContain('https://example.com/pricing')
             ->toContain(route('digests.show', $digest))
             ->not->toContain('Gone Already');
+    });
+
+    it('reads as a plain note, with short dates, each competitor\'s site and a way to change the schedule', function () {
+        $business = Business::factory()->create();
+        $acme = Competitor::factory()->for($business)->create(['name' => 'Acme Insights', 'url' => 'https://www.acme.example.com/about']);
+        $digest = Digest::factory()->for($business)->create(['report' => DigestFactory::report([$acme])]);
+
+        $message = (new DigestReady($digest))->toMail($business->user);
+        $html = (string) $message->render();
+        $text = view($message->view[1], $message->viewData)->render();
+
+        expect($message->view)->toBe(['mail.digest', 'mail.digest-text'])
+            ->and($html)->toContain('acme.example.com')
+            ->not->toContain('www.acme')
+            ->toContain('(Oct 10)')
+            ->toContain('— Creeper')
+            ->toContain(route('businesses.show', $business))
+            ->and($text)->toContain('Prices went up across the board this week.')
+            ->toContain('Growth plan now $249/month (Oct 10). Up from $199.')
+            ->toContain('Source: https://example.com/pricing')
+            ->toContain(route('digests.show', $digest))
+            ->not->toContain('<');
     });
 });
 

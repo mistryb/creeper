@@ -255,3 +255,15 @@ it('signs out and drops the remembered browser', function () {
     // Cycling the token is what stops the stored cookie working again.
     expect($user->fresh()->remember_token)->not->toBe($token);
 });
+
+it('sends the code as a plain note, split for reading and whole for copying', function () {
+    $message = (new LoginCodeNotification('314303'))->toMail(new stdClass);
+    $html = (string) $message->render();
+    $text = view($message->view[1], $message->viewData)->render();
+
+    expect($message->subject)->toBe('Your Creeper sign-in code: 314303')
+        ->and($html)->toContain('314<span style="margin-left: 14px;">303</span>')
+        ->toContain('It expires in 10 minutes and works once.')
+        ->and($text)->toContain("\n314303\n")
+        ->toContain('It expires in 10 minutes and works once.');
+});

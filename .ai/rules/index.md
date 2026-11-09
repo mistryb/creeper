@@ -13,6 +13,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Actions/DiscoverCompetitors.php, app/Actions/BuildDigest.php, app/Ai/UserKeyProvider.php | .ai/rules/drivers.md |
 | tests/Feature/*.php | .ai/rules/feature.md |
 | resources/js/** | .ai/rules/js.md |
+| resources/views/mail/** | .ai/rules/mail.md |
 | app/Http/Middleware/**, app/Http/Middleware/HandleInertiaRequests.php | .ai/rules/middleware.md |
 | app/Models/User.php | .ai/rules/models.md |
 | resources/js/pages/{welcome,deploy}.tsx | .ai/rules/pages.md |

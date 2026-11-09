@@ -4,10 +4,13 @@ namespace App\Notifications;
 
 use App\Models\Competitor;
 use App\Models\Digest;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * The digest itself, in the owner's inbox.
@@ -37,18 +40,22 @@ class DigestReady extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject(sprintf('%s competitor digest · %s', $business->name, $this->digest->period_end->toFormattedDateString()))
-            ->markdown('mail.digest', [
+            ->view(['mail.digest', 'mail.digest-text'], [
                 'business' => $business,
                 'digest' => $this->digest,
                 'sections' => $this->sections(),
                 'url' => route('digests.show', $this->digest),
+                'settingsUrl' => route('businesses.show', $business),
             ]);
     }
 
     /**
      * The report's sections, each paired with the competitor it is about.
      *
-     * @return list<array{competitor: Competitor, summary: string, items: list<array{title: string, detail: string, url: string|null, date: string|null}>}>
+     * Dates arrive as the model wrote them (`2026-10-10`) and leave as a short
+     * "Oct 10"; one it wrote some other way is shown as it is.
+     *
+     * @return list<array{competitor: Competitor, host: string|null, summary: string, items: list<array{title: string, detail: string, url: string|null, date: string|null}>}>
      */
     public function sections(): array
     {
@@ -61,13 +68,40 @@ class DigestReady extends Notification implements ShouldQueue
             if ($competitor instanceof Competitor) {
                 $sections[] = [
                     'competitor' => $competitor,
+                    'host' => $this->host($competitor->url),
                     'summary' => $section['summary'],
-                    'items' => $section['items'],
+                    'items' => array_map(fn (array $item): array => [
+                        ...$item,
+                        'date' => $this->shortDate($item['date'] ?? null),
+                    ], $section['items']),
                 ];
             }
         }
 
         return $sections;
+    }
+
+    /**
+     * A competitor's website as a reader would say it: no scheme, no `www.`.
+     */
+    private function host(?string $url): ?string
+    {
+        $host = $url === null ? null : parse_url($url, PHP_URL_HOST);
+
+        return is_string($host) ? Str::after($host, 'www.') : null;
+    }
+
+    private function shortDate(?string $date): ?string
+    {
+        if ($date === null || $date === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($date)->format('M j');
+        } catch (InvalidFormatException) {
+            return $date;
+        }
     }
 
     /**
